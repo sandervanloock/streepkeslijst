@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# One in-flight run per branch/PR; a new push cancels the old one.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write # for the preview URL comment
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # `npm run build` is `tsc -b && vite build`, so this is the typecheck too.
+      # main builds against the prod Firestore database, everything else develop.
+      - run: npm run build
+        env:
+          VITE_FIRESTORE_DB: ${{ github.ref == 'refs/heads/main' && 'prod' || 'develop' }}
+      - run: npm test
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_STREEPKESLIJST }}
+          projectId: streepkeslijst
+          # 'live' on main, a throwaway preview channel per PR (default 7d expiry).
+          channelId: ${{ github.ref == 'refs/heads/main' && 'live' || format('pr-{0}', github.event.number) }}
