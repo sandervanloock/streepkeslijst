@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import { signIn } from './auth'
 
+// Same palette/type as Lijst.tsx; the canvas glow + scanline live on body in index.html.
+const paper = '#F4F1E6'
+const lime = '#D8F651'
+const red = '#E4483A'
+
 export function Login() {
   const [error, setError] = useState<string>()
 
@@ -10,25 +15,70 @@ export function Login() {
   return (
     <main
       style={{
-        font: '16px/1.5 system-ui, sans-serif',
-        padding: 24,
-        background: '#121310',
-        color: '#F4F1E6',
         minHeight: '100vh',
-        display: 'grid',
-        placeContent: 'center',
-        textAlign: 'center',
-        gap: 24,
+        color: paper,
+        // Bottom padding > top, so the block centres a touch above true middle.
+        padding: '24px 18px 64px',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        gap: 22,
       }}
     >
-      <h1>Streepkeslijst</h1>
+      <div>
+        <div style={{ font: '400 10px ui-monospace,monospace', letterSpacing: '.16em', color: 'rgba(244,241,230,.45)' }}>
+          CHIRO ELZESTRAAT
+        </div>
+        <h1
+          style={{
+            margin: '10px 0 0',
+            font: '400 44px/0.95 Anton,sans-serif',
+            letterSpacing: '-.01em',
+            textTransform: 'uppercase',
+            color: paper,
+          }}
+        >
+          Streepkeslijst
+        </h1>
+        <p style={{ margin: '10px 0 0', font: '400 12.5px/1.55 "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.55)' }}>
+          Meld je aan om streepjes te zetten voor jezelf en de rest van de ploeg.
+        </p>
+      </div>
+
       <button
         onClick={onClick}
-        style={{ font: 'inherit', padding: '16px 24px', width: '100%', minHeight: 56 }}
+        style={{
+          width: '100%',
+          minHeight: 58,
+          padding: 16,
+          border: 'none',
+          borderRadius: 8,
+          background: lime,
+          color: '#121310',
+          font: '400 17px/1 Anton,sans-serif',
+          letterSpacing: '.04em',
+          textTransform: 'uppercase',
+          cursor: 'pointer',
+        }}
       >
         Aanmelden met Google
       </button>
-      {error && <p style={{ color: '#E88' }}>{error}</p>}
+
+      {error && (
+        <div
+          role="alert"
+          style={{
+            padding: '10px 11px',
+            borderRadius: 8,
+            background: 'rgba(228,72,58,.16)',
+            border: `1px solid ${red}`,
+            font: '500 11.5px/1.45 "Space Grotesk",sans-serif',
+            color: paper,
+          }}
+        >
+          {error}
+        </div>
+      )}
     </main>
   )
 }
