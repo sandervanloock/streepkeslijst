@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@claude'
 created_date: '2026-09-02 21:22'
-updated_date: '2026-09-02 21:46'
+updated_date: '2026-09-02 21:58'
 labels:
   - ui
   - design
@@ -50,6 +50,8 @@ Restyled src/Login.tsx only. Dropped the opaque #121310 background so the body r
 Layout tweak after review: block is vertically centred again (justifyContent center) with 24px top / 64px bottom padding so it lands slightly above true middle.
 
 Layout follow-up: the button itself now sits on the screen's vertical midline — header wrapper and a trailing spacer both flex:1, button flex:none, symmetric 24px vertical padding. The error card lives in the bottom spacer so the button does not shift when it appears.
+
+Replaced the hand-derived layout with a port of design/Login.dc.html (read over the claude_design MCP, project 097faf3b): lime app mark + CHIRO ELZESTRAAT eyebrow, 52px two-line Anton wordmark, the 'ZO ZIET HET ER BINNEN UIT' peek card (reuses tally() from src/tally.tsx), a paper pill 'Doorgaan met Google' button with the gradient-clipped G, the ENKEL OP UITNODIGING / waarom? row and the 'Waarom enkel op uitnodiging?' bottom sheet, plus the decorative corner tally. Added a real 'bezig' state (3 pulsing lime dots) while signIn() is pending; errors render in the design's red card. Added fadeIn + spinPulse keyframes to index.html. Skipped from the design: the Google account-picker sheet (the real popup is Google's own UI) and the 'welkom' step (App.tsx swaps to Lijst as soon as auth resolves). ios-frame.jsx is device chrome only; support.js is the Design Components runtime, nothing to port. Login.test.tsx grown to 4 tests (start state, bezig swap, inline error + button restore, waarom sheet open/close); 26 tests green, build clean.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
