@@ -1,6 +1,10 @@
 import { initializeApp } from 'firebase/app'
 import { getAuth, GoogleAuthProvider } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from 'firebase/firestore'
 
 // The only place the Firebase project config lives (see CLAUDE.md). The apiKey
 // is a public client identifier, not a secret.
@@ -27,4 +31,11 @@ export const dbId = databaseId(import.meta.env.VITE_FIRESTORE_DB, import.meta.en
 export const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)
 export const googleProvider = new GoogleAuthProvider()
-export const db = getFirestore(app, dbId)
+// The SDK caches in memory by default, which means an offline reload gets no
+// snapshot at all and the lijst renders empty. IndexedDB persistence serves the
+// last known streepjes and queues writes made without signal.
+export const db = initializeFirestore(
+  app,
+  { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) },
+  dbId,
+)
