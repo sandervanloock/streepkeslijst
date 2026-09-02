@@ -1,11 +1,37 @@
 rules_version = '2';
 
-// Placeholder: any signed-in user can read and write. Real per-role rules
-// (drankleider, beheerder, audit trail) land with TASK-1 and the data model.
+// Real rules for the ledger data model (TASK-3). Roles beyond "signed in"
+// (drankleider, beheerder) land with their own tasks.
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
+    match /users/{uid} {
       allow read, write: if request.auth != null;
+    }
+
+    match /meta/period {
+      // Read-only from the client, except the one-time seed on first load
+      // (usePeriod in data.ts) when the doc doesn't exist yet. Afsluiten /
+      // periode-beheer (another task) is the only thing allowed to change it
+      // after that, and will need its own rule then.
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if false;
+    }
+
+    match /periods/{periodId} {
+      match /guests/{guestId} {
+        allow read, create: if request.auth != null;
+        allow update, delete: if false;
+      }
+
+      match /entries/{entryId} {
+        // Append-only audit trail: you can only create an entry attributed to
+        // yourself, never edit one, and "undo" is deleting your own entry.
+        allow read: if request.auth != null;
+        allow create: if request.auth != null && request.resource.data.by == request.auth.uid;
+        allow update: if false;
+        allow delete: if request.auth != null && resource.data.by == request.auth.uid;
+      }
     }
   }
 }

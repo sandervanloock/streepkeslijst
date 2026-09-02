@@ -1,10 +1,11 @@
 ---
 id: TASK-1
 title: Implement Google login via Firebase Auth
-status: To Do
-assignee: []
+status: Done
+assignee:
+  - '@sander'
 created_date: '2026-08-31 18:55'
-updated_date: '2026-09-02 20:16'
+updated_date: '2026-09-02 20:20'
 labels:
   - infra
 milestone: m-0
@@ -21,12 +22,12 @@ Leaders sign into the app using their Google account so consumption can be attri
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Users can sign in with Google via Firebase Auth
-- [ ] #2 Signed-in user's Firebase uid/profile (name, email, photo) is available in app state
-- [ ] #3 Signed-out users are redirected to a login screen and cannot reach tracking screens
-- [ ] #4 Users can sign out
-- [ ] #5 First-time sign-in creates/links a corresponding user record in Firestore
-- [ ] #6 With sign-in working, a write from the deployed app lands in the 'prod' database and a write from npm run dev lands in 'develop', closing TASK-2.1 AC #2 and #3
+- [x] #1 Users can sign in with Google via Firebase Auth
+- [x] #2 Signed-in user's Firebase uid/profile (name, email, photo) is available in app state
+- [x] #3 Signed-out users are redirected to a login screen and cannot reach tracking screens
+- [x] #4 Users can sign out
+- [x] #5 First-time sign-in creates/links a corresponding user record in Firestore
+- [x] #6 With sign-in working, a write from the deployed app lands in the 'prod' database and a write from npm run dev lands in 'develop', closing TASK-2.1 AC #2 and #3
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -41,6 +42,16 @@ Leaders sign into the app using their Google account so consumption can be attri
 7. Tests: extend src/firebase.test.ts (or a new src/auth.test.ts) with a pure-function check only — the user-doc payload built from a Firebase User is worth one assert; onAuthStateChanged/popup wiring is not worth mocking the SDK for. Manual check per step 5 covers the rest.
 <!-- SECTION:PLAN:END -->
 
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Implemented: src/auth.ts (useAuth hook wrapping onAuthStateChanged, signIn via signInWithPopup, signOut, userDoc payload written with setDoc merge:true to users/{uid}), src/Login.tsx (single full-width Google sign-in button, inline error), App.tsx gates on useAuth (undefined -> nothing, null -> Login, User -> shell with name + Afmelden). src/auth.test.ts covers the userDoc payload. npm test 5/5 green, npm run build green.
+
+Not yet verified: AC #1-#6 all need a real Google sign-in, which cannot be automated here. Manual pass needed: npm run dev -> sign in -> ping -> confirm doc in 'develop'; then build + firebase deploy -> sign in -> ping -> confirm doc in 'prod' (also closes TASK-2.1 AC #2/#3). ACs left unchecked until that pass runs.
+
+Manual verification done by @sander: signed in with Google on npm run dev and on the deployed Hosting URL; ping wrote to 'develop' from dev and to 'prod' from the deploy. All ACs confirmed. Also closes TASK-2.1 AC #2/#3.
+<!-- SECTION:NOTES:END -->
+
 ## Comments
 
 <!-- COMMENTS:BEGIN -->
@@ -50,3 +61,9 @@ created: 2026-09-02 20:14
 TASK-2.1 deployed the scaffold but could not verify its database-targeting ACs: firestore.rules requires request.auth != null and there was no sign-in yet. Verifying that is now the first checkable thing this task unblocks - see the AC added for it.
 ---
 <!-- COMMENTS:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Google Sign-In on Firebase Auth. Added src/auth.ts (useAuth hook over onAuthStateChanged, signIn via signInWithPopup, signOut, and a users/{uid} record written with setDoc merge:true so first login creates it and later logins refresh the profile) and src/Login.tsx (single full-width Google button). App.tsx renders Login when signed out and the app shell with the signed-in name plus Afmelden when signed in, so tracking UI is unreachable without auth - no router yet, so the render gate is the guard until TASK-3 adds routes. Verified by npm test (5/5) and npm run build, plus a manual sign-in pass by @sander confirming writes land in 'develop' from npm run dev and in 'prod' from the deployed app.
+<!-- SECTION:FINAL_SUMMARY:END -->

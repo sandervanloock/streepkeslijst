@@ -5,6 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#121310" />
     <title>Streepkeslijst</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        margin: 0;
+        background: #121310;
+        background-image: radial-gradient(120% 60% at 50% -10%, rgba(216, 246, 81, .09), transparent 60%),
+          repeating-linear-gradient(0deg, rgba(255, 255, 255, .014) 0 1px, transparent 1px 3px);
+        font-family: 'Space Grotesk', system-ui, sans-serif;
+      }
+      @keyframes chalkIn { from { opacity: 0; transform: translateY(6px) scaleY(.4) } to { opacity: 1; transform: none } }
+      @keyframes holdfill { from { width: 0% } to { width: 100% } }
+      @keyframes sheetUp { from { transform: translateY(105%) } to { transform: translateY(0) } }
+      @keyframes panelIn { from { transform: translateX(100%) } to { transform: translateX(0) } }
+    </style>
   </head>
   <body>
     <div id="root"></div>

@@ -1,11 +1,11 @@
 ---
 id: TASK-2.1
 title: Scaffold app + configure Firestore Prod/Develop environments
-status: In Progress
+status: Done
 assignee:
   - '@sander'
 created_date: '2026-08-31 19:03'
-updated_date: '2026-09-02 20:14'
+updated_date: '2026-09-02 20:20'
 labels:
   - infra
 milestone: m-0
@@ -24,8 +24,8 @@ There is no application scaffold yet. Set up the frontend project (framework TBD
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
 - [x] #1 App can be built and deployed to Firebase Hosting for project streepkeslijst
-- [ ] #2 App can connect to either the 'Develop' or 'Prod' Firestore database based on environment/config, without duplicating Firebase config in multiple places
-- [ ] #3 Local dev defaults to the 'Develop' database
+- [x] #2 App can connect to either the 'Develop' or 'Prod' Firestore database based on environment/config, without duplicating Firebase config in multiple places
+- [x] #3 Local dev defaults to the 'Develop' database
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -70,4 +70,12 @@ AC #1 verified: `firebase deploy --only hosting,firestore` reported "release com
 AC #2 and #3 are NOT yet objectively verified and stay unchecked. The database *resolution* is proven - three unit tests plus the production bundle constant-folding to `PN=(r,t)=>"prod",Od=PN()` - but an actual read or write from the app cannot be demonstrated yet: firestore.rules requires `request.auth != null` and there is no sign-in until TASK-1. The ping button on the deployed shell will return permission-denied by design. Close these two either after TASK-1 lands, or by temporarily allowing an unauthenticated write to a `ping` collection, verifying, and reverting.
 
 Decision (Sander, 2026-09-02): defer AC #2 and #3 to TASK-1 rather than temporarily loosening firestore.rules. TASK-2.1 stays In Progress until sign-in exists and the two database connections are demonstrated end to end.
+
+AC #2 and #3 closed via TASK-1. With Google sign-in in place, @sander manually verified end to end: a ping write from `npm run dev` landed in the 'develop' database and a ping write from the deployed Hosting app landed in 'prod' - the single firebaseConfig in src/firebase.ts unchanged in both, only the resolved databaseId differing. That is the evidence the deferral (decision of 2026-09-02) was waiting for; firestore.rules was never loosened.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Scaffolded the app (Vite + React + TypeScript, hand-rolled to skip Vite's demo assets) with Firebase Hosting, Firestore and Google Auth SDK wiring, and split prod/develop as two named Firestore databases inside the single streepkeslijst project so one firebaseConfig serves both. src/firebase.ts resolves the database from the build mode - 'prod' for a production build, 'develop' otherwise, with VITE_FIRESTORE_DB as an override - so npm run dev can never reach prod data. Verified: npm test green over the resolution logic, the production bundle constant-folds to the prod id, `firebase deploy --only hosting,firestore` released rules and indexes to both databases and https://streepkeslijst.web.app serves the app (AC #1), and after TASK-1 added sign-in @sander confirmed manually that a write from npm run dev lands in 'develop' and a write from the deployed app lands in 'prod' (AC #2, #3).
+<!-- SECTION:FINAL_SUMMARY:END -->
