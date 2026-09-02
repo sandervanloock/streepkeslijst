@@ -26,9 +26,27 @@ Do not edit Backlog task, draft, document, decision, or milestone markdown files
 </CRITICAL_INSTRUCTION>
 <!-- BACKLOG.MD GUIDELINES END -->
 
-## Project status
+## Git workflow
 
-This repository has no application code yet — only Backlog.md task management (`backlog/`) and this file. There is no package.json, framework, or build tooling committed. Do not assume commands like `npm run build`/`test` exist; check for their presence before using them, and update this file's Commands section once a stack is scaffolded.
+Every task is developed on its own feature branch — never commit task work to `main`.
+
+1. Before implementing, branch off up-to-date `main`: `git checkout main && git pull && git checkout -b task-<id>-<short-slug>` (e.g. `task-2.11-ci-cd`).
+2. Commit on that branch as you go. Stage only the files belonging to the task; leave unrelated working-tree changes alone. Reference the task id in the commit subject, e.g. `Add CI/CD workflow (TASK-2.11)`.
+3. After finalization (acceptance criteria verified, final summary written, task moved to the terminal status), push the branch: `git push -u origin <branch>`.
+4. Stop there. Opening the PR, reviewing, and merging to `main` is the user's job — do not open, merge, or squash anything without being asked.
+
+## Stack and commands
+
+React 19 + TypeScript on Vite, Firebase SDK for auth and Firestore, Vitest + Testing Library (happy-dom) for tests. All app code lives flat in `src/`; tests sit next to what they test (`period.ts` / `period.test.ts`).
+
+- `npm run dev` — Vite dev server (builds in dev mode, so it talks to the `develop` Firestore database)
+- `npm run build` — `tsc -b && vite build`; this is also the typecheck, there is no separate one
+- `npm test` — `vitest run`
+- No linter is installed. Don't invent a `npm run lint`.
+
+`src/firebase.ts` is the single place the Firebase config and database selection live: a production build targets the `prod` Firestore database, anything else `develop`, with `VITE_FIRESTORE_DB` overriding both.
+
+CI (`.github/workflows/ci.yml`) runs build + tests on every PR and push to `main`, then deploys to Firebase Hosting — a per-PR preview channel built against `develop`, the live channel against `prod` on `main`.
 
 ## Product context
 
