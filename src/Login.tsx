@@ -15,14 +15,14 @@ export function Login() {
   return (
     <main
       style={{
-        minHeight: '100vh',
+        boxSizing: 'border-box',
+        minHeight: '100dvh',
         color: paper,
-        padding: '24px 18px',
+        // Wordmark in the upper third, button pushed down to thumb reach, so the
+        // layout spans the screen instead of huddling in the middle.
+        padding: '18vh 18px calc(24px + env(safe-area-inset-bottom))',
         display: 'flex',
         flexDirection: 'column',
-        // Wordmark + button centre as one group, so the empty canvas above and
-        // below is symmetric instead of pooling under the button.
-        justifyContent: 'center',
         gap: 22,
       }}
     >
@@ -50,6 +50,7 @@ export function Login() {
         onClick={onClick}
         style={{
           flex: 'none',
+          marginTop: 'auto',
           width: '100%',
           minHeight: 58,
           padding: 16,
