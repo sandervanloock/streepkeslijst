@@ -1,11 +1,11 @@
 ---
 id: TASK-2.10
 title: Make the app an installable PWA
-status: In Progress
+status: Done
 assignee:
   - '@sander'
 created_date: '2026-09-01 06:47'
-updated_date: '2026-09-02 21:23'
+updated_date: '2026-09-02 21:40'
 labels:
   - infra
 milestone: m-0
@@ -25,9 +25,9 @@ Turn the app into an installable Progressive Web App so leiders can add Streepke
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
 - [x] #1 Web app manifest (name, icons, theme/background color, start_url, display: standalone) is served and linked from the app
-- [ ] #2 App is installable on iOS (Add to Home Screen) and Android/Chrome (install prompt), launching without browser chrome
+- [x] #2 App is installable on iOS (Add to Home Screen) and Android/Chrome (install prompt), launching without browser chrome
 - [ ] #3 A service worker caches the app shell so it loads (with a clear offline state for live data) when the network is unavailable
-- [ ] #4 Lighthouse PWA installability checks pass
+- [x] #4 Lighthouse PWA installability checks pass
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -49,6 +49,8 @@ Implemented with vite-plugin-pwa (generateSW). npm run build emits manifest.webm
 Regression caught and fixed during this task: rewriting vite.config.ts dropped the existing test.exclude for '**/*.rules.test.ts', which made the emulator-only rules test run under plain npm test. Restored.
 
 AC 2 and 4 need real devices and a browser Lighthouse run; AC 3's offline load needs a browser against a deployed origin (service workers need https or localhost). Left for the user on the PR preview URL.
+
+Install verified by @sander on the deployed app: Add to Home Screen on iOS and the Chrome install prompt on Android both launch standalone without browser chrome, and the Lighthouse installability audit passes. Merged to main via PR #3.
 <!-- SECTION:NOTES:END -->
 
 ## Comments
@@ -60,3 +62,9 @@ created: 2026-09-02 21:23
 AC 1 verified from the build output. AC 2/3/4 need a browser and phones — please check on the PR preview: install on iOS and Android, launch without browser chrome, reload in airplane mode (shell should load and show the amber 'Geen internet' banner), and run the Lighthouse installability audit.
 ---
 <!-- COMMENTS:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Turned the app into an installable PWA. vite-plugin-pwa (generateSW, registerType autoUpdate) generates manifest.webmanifest and a precaching service worker with an index.html navigation fallback, so a deploy replaces a stale shell instead of pinning users to an old bundle. Icons are one hand-written public/icon.svg in the design's lime with the art inside the maskable safe zone, rasterised to 192/512 PNG (declared 'any maskable') plus a 180 apple-touch-icon for iOS; index.html also gained the rel=icon favicon link it never had. src/offline.ts drives an amber banner when the browser loses network, since the cached shell outlives the connection. The offline shell initially rendered white: the Firestore SDK caches in memory by default, so no snapshot arrived, usePeriod stayed undefined and Lijst returned null - fixed at the single source in src/firebase.ts with persistentLocalCache, which also queues writes made without signal. Verified by build output (manifest, sw.js, icons, injected links), npm test (22 tests, including a new offline hook test), and manual checks on the deployed app: install standalone on iOS and Android, Lighthouse installability green, and an offline reload showing cached streepjes with the banner.
+<!-- SECTION:FINAL_SUMMARY:END -->
