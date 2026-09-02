@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@claude'
 created_date: '2026-09-02 21:22'
-updated_date: '2026-09-02 21:44'
+updated_date: '2026-09-02 21:46'
 labels:
   - ui
   - design
@@ -48,6 +48,8 @@ src/Login.tsx is still the placeholder from TASK-1: a bare Google button on an u
 Restyled src/Login.tsx only. Dropped the opaque #121310 background so the body radial glow + scanline (index.html) shows through; added the CHIRO ELZESTRAAT eyebrow, Anton uppercase wordmark, Space Grotesk sub-copy, a full-width lime button (min-height 58) and the red inline error card reused from Lijst.tsx. Content is top-aligned with 24px top padding per user request (less whitespace above the wordmark). No new deps, no CSS files. New src/Login.test.tsx asserts the Anton uppercase heading, lime full-width >=44px button, transparent main (glow not covered) and the inline role=alert error after a rejected signIn. Verified: npm test 7 files / 24 tests passed, npm run build (tsc -b + vite) clean.
 
 Layout tweak after review: block is vertically centred again (justifyContent center) with 24px top / 64px bottom padding so it lands slightly above true middle.
+
+Layout follow-up: the button itself now sits on the screen's vertical midline — header wrapper and a trailing spacer both flex:1, button flex:none, symmetric 24px vertical padding. The error card lives in the bottom spacer so the button does not shift when it appears.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
