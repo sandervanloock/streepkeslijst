@@ -18,7 +18,7 @@ export function Login() {
         minHeight: '100vh',
         color: paper,
         // Bottom padding > top, so the block centres a touch above true middle.
-        padding: '24px 18px 64px',
+        padding: '24px 18px 140px',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
