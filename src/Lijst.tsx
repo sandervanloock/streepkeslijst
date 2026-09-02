@@ -304,15 +304,15 @@ export function Lijst({ user }: { user: User }) {
 
         <div style={{ display: 'flex', gap: 1, margin: '6px 12px 14px', background: 'rgba(244,241,230,.1)', borderRadius: 8, overflow: 'hidden' }}>
           <div style={{ flex: 1, padding: '9px 10px', background: '#1B1D17' }}>
-            <div style={{ font: '400 24px/1 Anton,sans-serif', color: paper }}>{totStreep}</div>
+            <div data-stat="streepjes" style={{ font: '400 24px/1 Anton,sans-serif', color: paper }}>{totStreep}</div>
             <div style={{ font: '500 9.5px "Space Grotesk",sans-serif', letterSpacing: '.08em', color: 'rgba(244,241,230,.45)', marginTop: 3 }}>STREEPJES</div>
           </div>
           <div style={{ flex: 1, padding: '9px 10px', background: '#1B1D17' }}>
-            <div style={{ font: '400 24px/1 Anton,sans-serif', color: amber }}>{totBak}</div>
+            <div data-stat="bakken" style={{ font: '400 24px/1 Anton,sans-serif', color: amber }}>{totBak}</div>
             <div style={{ font: '500 9.5px "Space Grotesk",sans-serif', letterSpacing: '.08em', color: 'rgba(244,241,230,.45)', marginTop: 3 }}>BAKKEN</div>
           </div>
           <div style={{ flex: 1, padding: '9px 10px', background: '#1B1D17' }}>
-            <div style={{ font: '400 24px/1 Anton,sans-serif', color: lime }}>{euro(totEuro)}</div>
+            <div data-stat="euro" style={{ font: '400 24px/1 Anton,sans-serif', color: lime }}>{euro(totEuro)}</div>
             <div style={{ font: '500 9.5px "Space Grotesk",sans-serif', letterSpacing: '.08em', color: 'rgba(244,241,230,.45)', marginTop: 3 }}>TE INNEN</div>
           </div>
         </div>
@@ -373,6 +373,7 @@ export function Lijst({ user }: { user: User }) {
             return (
               <div
                 key={p.id}
+                data-row={p.personRef}
                 onPointerDown={() => onHoldDown(p.personRef)}
                 onPointerUp={() => onHoldUp(p.personRef)}
                 onPointerLeave={() => onHoldCancel(p.personRef)}
@@ -404,10 +405,10 @@ export function Lijst({ user }: { user: User }) {
                   </div>
                 </div>
                 <div style={{ textAlign: 'right', flex: 'none' }}>
-                  <div style={{ font: '400 27px/0.9 Anton,sans-serif', color: paper }}>{t.streep}</div>
+                  <div data-streep style={{ font: '400 27px/0.9 Anton,sans-serif', color: paper }}>{t.streep}</div>
                   <div style={{ font: '500 9px "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.4)' }}>STREEPJES</div>
                   {t.bak > 0 && (
-                    <div style={{ marginTop: 6, font: '400 12px/1 Anton,sans-serif', letterSpacing: '.05em', color: amber }}>
+                    <div data-bak style={{ marginTop: 6, font: '400 12px/1 Anton,sans-serif', letterSpacing: '.05em', color: amber }}>
                       {t.bak > 1 ? `+ ${t.bak} BAKKEN` : '+ 1 BAK'}
                     </div>
                   )}
@@ -432,6 +433,7 @@ export function Lijst({ user }: { user: User }) {
                 )}
                 {holdingId === p.personRef && (
                   <div
+                    data-hold
                     style={{
                       position: 'absolute',
                       left: 0,
