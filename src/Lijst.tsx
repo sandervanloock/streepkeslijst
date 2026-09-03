@@ -265,18 +265,18 @@ export function Lijst({ user }: { user: User }) {
   // slot = DRANKLEIDER, admin = BEHEERDER). Only Beheer is hidden outright —
   // the design's enkelAdmin — the drankleider screens stay listed and badged.
   const nav: { label: string; sub?: string; rol?: Rol }[] = [
-    { label: 'Lijst', sub: people.length + ' leiders · ' + totStreep + ' streepjes' },
+    { label: 'De lijst', sub: people.length + ' leiders · ' + totStreep + ' streepjes' },
+    { label: 'Mijn profiel', sub: 'je bijnaam op de lijst · ' + myNick },
+    { label: 'Meldingen' },
+    { label: 'Betalen' },
+    { label: 'Inningen', rol: 'drankleider' },
     {
-      label: 'Afsluiten',
+      label: 'Periode afsluiten',
       sub: period.eind ? 'laatste dag ' + period.eind + ' · ' + euro(period.bakPrijs) + ' per BAK' : 'nog geen einddatum gekozen',
       rol: 'drankleider',
     },
     // design line 1705: Beheer is enkelAdmin, everyone else never sees it.
     ...(myRole === 'beheerder' ? [{ label: 'Beheer', sub: group.naam, rol: 'beheerder' as Rol }] : []),
-    { label: 'Mijn profiel', sub: 'je bijnaam op de lijst · ' + myNick },
-    { label: 'Betalen' },
-    { label: 'Inningen', rol: 'drankleider' },
-    { label: 'Meldingen' },
   ]
 
   // With the screen in the URL, #/beheer is typeable by anyone — a lid who lands
@@ -558,11 +558,11 @@ export function Lijst({ user }: { user: User }) {
                     key={label}
                     onClick={() => {
                       setMenuOpen(false)
-                      if (label !== 'Lijst') setScherm(label)
+                      if (label !== 'De lijst') setScherm(label)
                     }}
-                    style={{ background: label === open || (label === 'Lijst' && !open) ? '#1B1D17' : 'transparent', padding: '15px 18px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', position: 'relative' }}
+                    style={{ background: label === open || (label === 'De lijst' && !open) ? '#1B1D17' : 'transparent', padding: '15px 18px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', position: 'relative' }}
                   >
-                    {(label === open || (label === 'Lijst' && !open)) && <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: lime }} />}
+                    {(label === open || (label === 'De lijst' && !open)) && <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: lime }} />}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ font: '400 19px/1 Anton,sans-serif', letterSpacing: '.02em', textTransform: 'uppercase', color: paper }}>{label}</div>
                       {sub && (

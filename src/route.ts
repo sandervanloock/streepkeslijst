@@ -10,12 +10,12 @@ import { useEffect, useState } from 'react'
  * are what the menu and the screens already use.
  */
 const schermen: Record<string, string> = {
-  afsluiten: 'Afsluiten',
-  beheer: 'Beheer',
   profiel: 'Mijn profiel',
+  meldingen: 'Meldingen',
   betalen: 'Betalen',
   inningen: 'Inningen',
-  meldingen: 'Meldingen',
+  afsluiten: 'Periode afsluiten',
+  beheer: 'Beheer',
 }
 
 const slugs: Record<string, string> = Object.fromEntries(
