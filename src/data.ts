@@ -148,3 +148,26 @@ export const addGuest = (periodId: string, nick: string, naam: string, mail: str
     by: byUid,
     at: serverTimestamp(),
   })
+
+/** users/{uid}, live: the extra fields (mail) that Person/usePeople doesn't carry (TASK-5). */
+export function useProfile(uid: string) {
+  const [profile, setProfile] = useState<{ nick: string; naam: string; mail: string }>()
+
+  useEffect(
+    () =>
+      onSnapshot(doc(db, 'users', uid), (snap) => {
+        const data = snap.data()
+        setProfile({ nick: data?.nick ?? '', naam: data?.name ?? '', mail: data?.mail ?? '' })
+      }),
+    [uid],
+  )
+
+  return profile
+}
+
+/** The payout address is `mail`, deliberately not `email`: `email` is the Google account
+ *  identity that userDoc() refreshes on every login, so storing a hand-picked address
+ *  there would be undone at the next sign-in — the same trap the nick was in. Guests
+ *  already use `mail` for their afrekening address (addGuest). */
+export const saveProfile = (uid: string, nick: string, naam: string, mail: string) =>
+  setDoc(doc(db, 'users', uid), { nick, name: naam, mail }, { merge: true })

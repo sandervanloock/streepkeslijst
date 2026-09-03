@@ -59,6 +59,8 @@ vi.mock('./data', async () => {
       listeners.forEach((l) => l())
       return Promise.resolve({ id: 'g' })
     },
+    useProfile: () => ({ nick: 'Sander', naam: 'Sander V.', email: 'sander@x.be' }),
+    saveProfile: vi.fn(() => Promise.resolve()),
   }
 })
 
@@ -208,4 +210,14 @@ test('AC7: een gast komt via + gast toevoegen op de lijst van deze periode', asy
 
   await tik('guest:g0') // en je kan er meteen op strepen
   expect(streepjes('guest:g0')).toBe('1')
+})
+
+test('AC1: Mijn profiel in het menu opent het echte scherm, geen stub', async () => {
+  render(<Lijst user={me} />)
+
+  fireEvent.click(screen.getAllByText('Sander')[0]) // het menu-chipje bovenaan
+  fireEvent.click(screen.getByText('Mijn profiel'))
+
+  expect(screen.queryByText('Komt nog.')).toBeNull()
+  expect(screen.getByText('Zo staat je naam op de lijst en in de mededeling van je betaling.')).toBeTruthy()
 })

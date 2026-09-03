@@ -5,7 +5,11 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{uid} {
-      allow read, write: if request.auth != null;
+      // Everyone can read the roster; you can only write your own profile
+      // (TASK-5's Mijn profiel). A beheerder writing someone else's doc
+      // arrives with TASK-6.
+      allow read: if request.auth != null;
+      allow write: if request.auth.uid == uid;
     }
 
     match /meta/period {

@@ -14,6 +14,7 @@ import {
 import { euro, totals } from './period'
 import { tally } from './tally'
 import { signOut } from './auth'
+import { Profiel } from './Profiel'
 
 // Small building blocks shared by the two bottom sheets and the side panel
 // (design lines 533-735). Ported section by section, Dutch copy verbatim.
@@ -209,18 +210,24 @@ export function Lijst({ user }: { user: User }) {
   const nav = ['Lijst', 'Afsluiten', 'Beheer', 'Mijn profiel', 'Betalen', 'Inningen', 'Meldingen']
 
   if (scherm) {
-    // ponytail: every destination except lijst is a stub, per TASK-3 scope. Real
-    // screens (and their own state) land in their own tasks.
+    // ponytail: every destination except lijst and Mijn profiel is a stub, per
+    // TASK-3 scope. Real screens (and their own state) land in their own tasks.
     return (
-      <main style={{ minHeight: '100vh', background: '#121310', color: paper, padding: '58px 18px' }}>
+      <main style={{ minHeight: '100vh', background: '#121310', color: paper, padding: '58px 18px 0', display: 'flex', flexDirection: 'column' }}>
         <div
           onClick={() => setScherm(undefined)}
           style={{ display: 'inline-block', cursor: 'pointer', font: '500 12px "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.7)' }}
         >
           ← Terug
         </div>
-        <h1 style={{ font: '400 30px/1 Anton,sans-serif', textTransform: 'uppercase', marginTop: 16 }}>{scherm}</h1>
-        <p style={{ font: '500 12px "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.5)' }}>Komt nog.</p>
+        {scherm === 'Mijn profiel' ? (
+          <Profiel user={user} people={people} period={period} onTerug={() => setScherm(undefined)} />
+        ) : (
+          <>
+            <h1 style={{ font: '400 30px/1 Anton,sans-serif', textTransform: 'uppercase', marginTop: 16 }}>{scherm}</h1>
+            <p style={{ font: '500 12px "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.5)' }}>Komt nog.</p>
+          </>
+        )}
       </main>
     )
   }

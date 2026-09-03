@@ -28,3 +28,10 @@ export function euroTotaal(t: Totals, prijs: number, bakPrijs: number): number {
 
 /** '€' + design's bedragRuw: toFixed(2) with a comma, design line 881-882. */
 export const euro = (v: number) => '€' + v.toFixed(2).replace('.', ',')
+
+/** 'dd/mm' from an ISO date, design's kort() (line 883-886). */
+export const kort = (iso: string) => iso.slice(8) + '/' + iso.slice(5, 7)
+
+/** The payment reference shown under the nick input, design's mededeling() (line 888-891). */
+export const mededeling = (nick: string, period: { nr: number; start: string; eind: string | null }) =>
+  'STREEPJES P' + period.nr + ' ' + kort(period.start) + '-' + (period.eind ? kort(period.eind) : '') + ' ' + nick.toUpperCase()

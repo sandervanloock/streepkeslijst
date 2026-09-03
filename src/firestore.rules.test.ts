@@ -93,6 +93,12 @@ test('de periode wordt eenmalig gezaaid en daarna niet meer aangepast', async ()
   await assertFails(deleteDoc(doc(sander(), 'meta', 'period')))
 })
 
+test('AC8: je kan je eigen profiel schrijven, niet dat van iemand anders', async () => {
+  await assertSucceeds(setDoc(doc(sander(), 'users', 'u1'), { nick: 'Wollie' }, { merge: true }))
+  await assertFails(setDoc(doc(sander(), 'users', 'u2'), { nick: 'Anders' }, { merge: true }))
+  await assertSucceeds(getDoc(doc(wollie(), 'users', 'u1'))) // iedereen mag de rest wel lezen
+})
+
 test('zonder login kom je er niet in', async () => {
   const gast = env.unauthenticatedContext().firestore()
 

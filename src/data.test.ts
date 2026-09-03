@@ -1,12 +1,12 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, expect, test, vi } from 'vitest'
-import { addBak, addGuest, addStreep, removeOne, undo, useEntries } from './data'
+import { addBak, addGuest, addStreep, removeOne, saveProfile, undo, useEntries, useProfile } from './data'
 
 // The Firestore SDK is mocked down to paths and payloads: what we want to know
 // is that the writers land on periods/{pid}/entries with the right delta, and
 // that useEntries re-renders on an incoming snapshot (someone else's write).
-const calls = { added: [] as [string, Record<string, unknown>][], deleted: [] as string[] }
-let emit: ((snap: { docs: { id: string; data: () => unknown }[] }) => void) | undefined
+const calls = { added: [] as [string, Record<string, unknown>][], deleted: [] as string[], set: [] as [string, Record<string, unknown>][] }
+let emit: ((snap: unknown) => void) | undefined
 
 vi.mock('./firebase', () => ({ db: {} }))
 
@@ -22,7 +22,10 @@ vi.mock('firebase/firestore', () => ({
     return Promise.resolve()
   },
   getDoc: () => Promise.resolve({ exists: () => true }),
-  setDoc: () => Promise.resolve(),
+  setDoc: (path: string, data: Record<string, unknown>) => {
+    calls.set.push([path, data])
+    return Promise.resolve()
+  },
   onSnapshot: (_path: string, cb: NonNullable<typeof emit>) => {
     emit = cb
     return () => {
@@ -35,6 +38,7 @@ vi.mock('firebase/firestore', () => ({
 beforeEach(() => {
   calls.added = []
   calls.deleted = []
+  calls.set = []
   emit = undefined
 })
 
@@ -84,4 +88,24 @@ test('een gast hoort bij één periode', async () => {
   expect(calls.added).toEqual([
     ['periods/p1/guests', { nick: 'Wollie', naam: 'Wout D.', mail: null, by: 'u1', at: 'TS' }],
   ])
+})
+
+test('useProfile leest users/{uid} en volgt wijzigingen', () => {
+  const { result } = renderHook(() => useProfile('u1'))
+  expect(result.current).toBeUndefined()
+
+  act(() => emit!({ data: () => ({ nick: 'Wollie', name: 'Wout D.', mail: 'w@x.be' }) }))
+  expect(result.current).toEqual({ nick: 'Wollie', naam: 'Wout D.', mail: 'w@x.be' })
+})
+
+test('saveProfile schrijft nick, naam en mail naar users/{uid} zonder de rest te overschrijven', async () => {
+  await saveProfile('u1', 'Wollie', 'Wout D.', 'w@x.be')
+  expect(calls.set).toEqual([['users/u1', { nick: 'Wollie', name: 'Wout D.', mail: 'w@x.be' }]])
+})
+
+/** The bug this field name exists to prevent: userDoc() refreshes `email` on every
+ *  login, so a payout address saved there would be silently reverted. */
+test('saveProfile raakt het email-veld van het Google-account niet aan', async () => {
+  await saveProfile('u1', 'Wollie', 'Wout D.', 'anders@x.be')
+  expect(Object.keys(calls.set[0][1] as object)).not.toContain('email')
 })

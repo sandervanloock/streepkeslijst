@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { euro, euroTotaal, totals } from './period'
+import { euro, euroTotaal, mededeling, totals } from './period'
 import type { Entry } from './period'
 
 test('groups entries per person and per kind', () => {
@@ -44,4 +44,9 @@ test('euro formatting uses a comma, not a dot', () => {
   expect(euro(1.5)).toBe('€1,50')
   expect(euro(31.5)).toBe('€31,50')
   expect(euro(0)).toBe('€0,00')
+})
+
+test('AC6: mededeling matches the design format, dd/mm dates and an uppercased nick', () => {
+  expect(mededeling('wollie', { nr: 3, start: '2026-09-01', eind: '2026-09-30' })).toBe('STREEPJES P3 01/09-30/09 WOLLIE')
+  expect(mededeling('Sander', { nr: 1, start: '2026-01-05', eind: null })).toBe('STREEPJES P1 05/01- SANDER')
 })
