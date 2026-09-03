@@ -31,9 +31,12 @@ const purple = '#7A4BD1'
 
 const HOLD_MS = 620
 
-/** The header line: the menu chip's height and the title's cap height are the same
- *  number on purpose, so the two read as one band instead of drifting apart. */
+/** The header line. The title keeps the design's 26px, but its line box is the
+ *  chip's full height, so the two are exactly the same height and the text sits
+ *  dead centre against the button — Anton's high cap height makes plain
+ *  align-items:center look a notch too high. */
 const KOPHOOGTE = 44
+const KOPFONT = 26
 
 /** Design lines 958-974: a WebAudio noise burst + a vibrate, gated by the sound toggle. */
 function useKlik(geluid: boolean) {
@@ -312,7 +315,7 @@ export function Lijst({ user }: { user: User }) {
               flex: 1,
               minWidth: 0,
               margin: 0,
-              font: `400 ${KOPHOOGTE}px/1 Anton,sans-serif`,
+              font: `400 ${KOPFONT}px/${KOPHOOGTE}px Anton,sans-serif`,
               letterSpacing: '-.01em',
               color: paper,
               textTransform: 'uppercase',
@@ -355,7 +358,7 @@ export function Lijst({ user }: { user: User }) {
                 flex: 1,
                 minWidth: 0,
                 margin: 0,
-                font: `400 ${KOPHOOGTE}px/1 Anton,sans-serif`,
+                font: `400 ${KOPFONT}px/${KOPHOOGTE}px Anton,sans-serif`,
                 letterSpacing: '-.01em',
                 color: paper,
                 textTransform: 'uppercase',
