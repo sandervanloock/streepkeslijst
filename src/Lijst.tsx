@@ -211,10 +211,22 @@ export function Lijst({ user }: { user: User }) {
   const chipOpacity = period.open ? 1 : 0.4
 
   const myRole = people.find((p) => p.personRef === myRef)?.role ?? 'lid'
-  // design line 1705: Beheer is enkelAdmin, everyone else never sees it.
-  const nav = ['Lijst', 'Afsluiten', 'Beheer', 'Mijn profiel', 'Betalen', 'Inningen', 'Meldingen'].filter(
-    (label) => label !== 'Beheer' || myRole === 'beheerder',
-  )
+  // design lines 1697-1705: every entry carries a sub line. The three that need
+  // afrekeningen, inningen or meldingen have no data to read yet, so they stay
+  // without one until those screens are built.
+  const nav: { label: string; sub?: string }[] = [
+    { label: 'Lijst', sub: people.length + ' leiders · ' + totStreep + ' streepjes' },
+    {
+      label: 'Afsluiten',
+      sub: period.eind ? 'laatste dag ' + period.eind + ' · ' + euro(period.bakPrijs) + ' per BAK' : 'nog geen einddatum gekozen',
+    },
+    // design line 1705: Beheer is enkelAdmin, everyone else never sees it.
+    ...(myRole === 'beheerder' ? [{ label: 'Beheer', sub: group.naam }] : []),
+    { label: 'Mijn profiel', sub: 'je bijnaam op de lijst · ' + myNick },
+    { label: 'Betalen' },
+    { label: 'Inningen' },
+    { label: 'Meldingen' },
+  ]
 
   if (scherm) {
     // ponytail: every destination except lijst, Mijn profiel and Beheer is a
@@ -523,7 +535,7 @@ export function Lijst({ user }: { user: User }) {
 
             <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '18px 0 34px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 1, background: 'rgba(244,241,230,.08)' }}>
-                {nav.map((label) => (
+                {nav.map(({ label, sub }) => (
                   <div
                     key={label}
                     onClick={() => {
@@ -535,6 +547,9 @@ export function Lijst({ user }: { user: User }) {
                     {label === 'Lijst' && <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: lime }} />}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ font: '400 19px/1 Anton,sans-serif', letterSpacing: '.02em', textTransform: 'uppercase', color: paper }}>{label}</div>
+                      {sub && (
+                        <div style={{ font: '400 10.5px/1.45 "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.38)', marginTop: 4 }}>{sub}</div>
+                      )}
                     </div>
                   </div>
                 ))}

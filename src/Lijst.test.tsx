@@ -243,3 +243,14 @@ test('AC2 + AC3: een beheerder ziet Beheer en opent het echte scherm', () => {
   expect(screen.queryByText('Komt nog.')).toBeNull()
   expect(screen.getByText('Wie zit in de groep, wie mag wat. Alleen beheerders zien deze pagina.')).toBeTruthy()
 })
+
+test('het menu zet onder elk label de sub-regel uit het ontwerp', () => {
+  store.mijnRol = 'beheerder'
+  render(<Lijst user={me} />)
+  fireEvent.click(screen.getAllByText('Sander')[0])
+
+  expect(screen.getByText('2 leiders · 0 streepjes')).toBeTruthy()
+  expect(screen.getByText('je bijnaam op de lijst · Sander')).toBeTruthy()
+  expect(screen.getByText('nog geen einddatum gekozen')).toBeTruthy()
+  expect(screen.getByText('Chiro Elzestraat')).toBeTruthy()
+})
