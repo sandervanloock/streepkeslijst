@@ -229,7 +229,7 @@ export function Lijst({ user }: { user: User }) {
         </div>
         {scherm === 'Mijn profiel' ? (
           <Profiel user={user} people={people} period={period} onTerug={() => setScherm(undefined)} />
-        ) : scherm === 'Beheer' && group ? (
+        ) : scherm === 'Beheer' ? (
           <Beheer user={user} people={people} group={group} onToast={(tekst) => zegSnack(undefined, tekst, lime)} />
         ) : (
           <>

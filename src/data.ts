@@ -58,9 +58,13 @@ export type Group = { naam: string }
 
 const defaultGroup: Group = { naam: 'Chiro Elzestraat' }
 
-/** meta/group, seeded once and then just read, exactly like usePeriod above. */
+/** meta/group, seeded once and then just read, like usePeriod above — except this
+ *  one never returns undefined. A period must be loaded before anything renders
+ *  (its prices are real money), but a group name is cosmetic: falling back to the
+ *  default beats hiding the whole Beheer screen when the doc is missing or the
+ *  read is denied, which is exactly what a not-yet-deployed rules change looks like. */
 export function useGroup() {
-  const [group, setGroup] = useState<Group>()
+  const [group, setGroup] = useState<Group>(defaultGroup)
 
   useEffect(() => {
     const ref = doc(db, 'meta', 'group')
