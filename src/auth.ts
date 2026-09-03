@@ -52,17 +52,24 @@ export function useAuth() {
         setAuthError(undefined)
 
         const ref = doc(db, 'users', u.uid)
-        getDoc(ref).then((snap) => {
-          if (snap.exists()) {
-            // Al lid: alleen de Google-profielvelden verversen, nick en role nooit aanraken.
-            setDoc(ref, userDoc(u), { merge: true })
-            return
-          }
-          claimInvite(u).catch(() => {
-            setAuthError('Dit Google-account is niet uitgenodigd voor deze groep.')
+        getDoc(ref)
+          .then((snap) => {
+            if (snap.exists()) {
+              // Al lid: alleen de Google-profielvelden verversen, nick en role nooit aanraken.
+              return setDoc(ref, userDoc(u), { merge: true })
+            }
+            return claimInvite(u).catch(() => {
+              setAuthError('Dit Google-account is niet uitgenodigd voor deze groep.')
+              return fbSignOut(auth)
+            })
+          })
+          .catch(() => {
+            // Reading/refreshing your own doc failed for another reason — rules not
+            // deployed yet is exactly this shape. Fail closed instead of leaving an
+            // uncaught rejection and the user stuck on a blank screen.
+            setAuthError('Aanmelden lukte niet. Probeer het opnieuw.')
             fbSignOut(auth)
           })
-        })
       }),
     [],
   )

@@ -25,9 +25,11 @@ vi.mock('firebase/auth', () => ({
   signOut: () => fbSignOut(),
 }))
 
+let getDocFaalt = false
+
 vi.mock('firebase/firestore', () => ({
   doc: (_db: unknown, ...path: string[]) => path.join('/'),
-  getDoc: () => Promise.resolve({ exists: () => bestaatAl }),
+  getDoc: () => (getDocFaalt ? Promise.reject(new Error('permission-denied')) : Promise.resolve({ exists: () => bestaatAl })),
   setDoc: (path: string, data: unknown) => {
     calls.setDoc.push([path, data])
     return Promise.resolve()
@@ -48,6 +50,7 @@ beforeEach(() => {
   fbSignOut.mockClear()
   bestaatAl = false
   commitFaalt = false
+  getDocFaalt = false
 })
 
 /** Flushes the getDoc().then(...) -> claimInvite().catch(...) chain: a real
@@ -109,6 +112,18 @@ test('AC8: an uninvited address never gets a users/{uid} doc and is signed back 
 
   expect(fbSignOut).toHaveBeenCalledTimes(1)
   expect(result.current[1]).toBe('Dit Google-account is niet uitgenodigd voor deze groep.')
+})
+
+test('reading your own doc failing (e.g. rules not deployed yet) signs out instead of an uncaught rejection', async () => {
+  getDocFaalt = true
+  const { result } = renderHook(() => useAuth())
+  const iemand = { uid: 'u9', displayName: 'Iemand', email: 'iemand@mail.be', photoURL: null }
+
+  act(() => authCb!(iemand))
+  await wacht()
+
+  expect(fbSignOut).toHaveBeenCalledTimes(1)
+  expect(result.current[1]).toBe('Aanmelden lukte niet. Probeer het opnieuw.')
 })
 
 test('an existing member only gets the Google profile fields refreshed, not a fresh nick or role', async () => {
