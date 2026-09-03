@@ -279,10 +279,47 @@ export function Lijst({ user }: { user: User }) {
 
   // ponytail: every destination except lijst, Mijn profiel and Beheer is a stub,
   // per TASK-3 scope. Real screens land in their own tasks.
+  // The title sits on the chip's row, the same way the lijst's own h1 does, so
+  // every screen has one header line instead of a title stacked under the chip.
+  // The role badge rides along with it (design line 179).
+  const openRol = nav.find((t) => t.label === open)?.rol
+
   const scherminhoud = (
     <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '58px 18px 34px', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ flex: 1 }} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+          {openRol && (
+            <span
+              style={{
+                flex: 'none',
+                font: '400 9px/1 Anton,sans-serif',
+                letterSpacing: '.1em',
+                padding: '4px 5px',
+                borderRadius: 2,
+                background: openRol === 'beheerder' ? purple : lime,
+                color: openRol === 'beheerder' ? paper : '#121310',
+              }}
+            >
+              {openRol.toUpperCase()}
+            </span>
+          )}
+          <h1
+            style={{
+              flex: 1,
+              minWidth: 0,
+              margin: 0,
+              font: '400 26px/1 Anton,sans-serif',
+              letterSpacing: '-.01em',
+              color: paper,
+              textTransform: 'uppercase',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {open}
+          </h1>
+        </div>
         <MenuChip nick={myNick} onOpen={() => setMenuOpen(true)} />
       </div>
       {open === 'Mijn profiel' ? (
@@ -290,10 +327,7 @@ export function Lijst({ user }: { user: User }) {
       ) : open === 'Beheer' ? (
         <Beheer user={user} people={people} group={group} onToast={toast} />
       ) : (
-        <>
-          <h1 style={{ font: '400 30px/1 Anton,sans-serif', textTransform: 'uppercase', marginTop: 16 }}>{open}</h1>
-          <p style={{ font: '500 12px "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.5)' }}>Komt nog.</p>
-        </>
+        <p style={{ font: '500 12px "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.5)' }}>Komt nog.</p>
       )}
     </div>
   )

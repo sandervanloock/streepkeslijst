@@ -5,9 +5,9 @@ import type { Period, Person } from './data'
 import { mededeling } from './period'
 
 // Ported from design/"Streepkeslijst App.dc.html", the profielOpen block
-// (lines 267-307), Dutch copy verbatim. The header row's menu button and
-// avatar are already the panel's own concern in Lijst.tsx, so this screen
-// only ports the heading, subtitle and the profile card.
+// (lines 267-307), Dutch copy verbatim. The header row — menu chip, heading —
+// belongs to Lijst.tsx, which shares it across every screen, so this file is
+// just the subtitle and the profile card.
 const paper = '#F4F1E6'
 const lime = '#D8F651'
 const red = '#E4483A'
@@ -47,7 +47,6 @@ export function Profiel({ user, people, period, onToast }: { user: User; people:
 
   return (
     <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-      <h2 style={{ margin: '16px 0 0', font: '400 38px/0.92 Anton,sans-serif', color: paper, textTransform: 'uppercase' }}>Mijn profiel</h2>
       <div style={{ font: '400 11.5px/1.5 "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.5)', marginTop: 7 }}>
         Zo staat je naam op de lijst en in de mededeling van je betaling.
       </div>

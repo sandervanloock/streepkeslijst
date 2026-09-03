@@ -302,3 +302,23 @@ test('via De lijst in het menu kom je terug op de lijst', () => {
   expect(location.hash).toBe('#/')
   expect(screen.getByText('PERIODE 1 · LIVE')).toBeTruthy()
 })
+
+test('de titel staat op de regel van het menuknopje, met de rolbadge erbij', () => {
+  store.mijnRol = 'beheerder'
+  location.hash = '#/beheer'
+  render(<Lijst user={me} />)
+
+  // titel, badge en chipje staan samen in één kop, niet gestapeld
+  const kop = screen.getByText('Beheer').parentElement!.parentElement!
+  expect(kop.textContent).toContain('BEHEERDER')
+  expect(kop.textContent).toContain('Beheer')
+  expect(kop.textContent).toContain('Sander') // het menuchipje
+})
+
+test('een scherm zonder rol krijgt gewoon de titel, geen badge', () => {
+  location.hash = '#/betalen'
+  render(<Lijst user={me} />)
+
+  expect(screen.getByText('Betalen')).toBeTruthy()
+  expect(screen.queryByText('DRANKLEIDER')).toBeNull()
+})

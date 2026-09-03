@@ -6,7 +6,9 @@ import { magRolWijzigen } from './period'
 
 // Ported from design/"Streepkeslijst App.dc.html", the beheerOpen block
 // (lines 175-265), Dutch copy verbatim. The two invite sections of that block
-// (VOLK ERBIJ HALEN and GEMAILD, NOG NIET AANGESLOTEN) are TASK-7.
+// (VOLK ERBIJ HALEN and GEMAILD, NOG NIET AANGESLOTEN) are TASK-7. The heading
+// and the BEHEERDER badge belong to the shared header row in Lijst.tsx, which
+// keeps them on the menu chip's line on every screen.
 const paper = '#F4F1E6'
 const lime = '#D8F651'
 const red = '#E4483A'
@@ -67,10 +69,6 @@ export function Beheer({
 
   return (
     <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-      <span style={{ font: '400 9px/1 Anton,sans-serif', letterSpacing: '.1em', color: paper, background: purple, padding: '4px 5px', borderRadius: 2 }}>
-        BEHEERDER
-      </span>
-      <h2 style={{ margin: '11px 0 0', font: '400 38px/0.92 Anton,sans-serif', color: paper, textTransform: 'uppercase' }}>Beheer</h2>
       <div style={{ font: '400 11.5px/1.5 "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.5)', marginTop: 7 }}>
         Wie zit in de groep, wie mag wat. Alleen beheerders zien deze pagina.
       </div>

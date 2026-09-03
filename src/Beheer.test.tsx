@@ -50,10 +50,11 @@ beforeEach(() => {
 
 afterEach(cleanup)
 
-test('AC3: het scherm toont de badge, de groepsnaam en elk lid met de drieweg-keuze', () => {
+// The BEHEERDER badge and the heading live on the shared header row in Lijst.tsx,
+// so they are asserted there, not here.
+test('AC3: het scherm toont de groepsnaam en elk lid met de drieweg-keuze', () => {
   toon()
 
-  expect(screen.getByText('BEHEERDER')).toBeTruthy()
   expect(screen.getByDisplayValue('Chiro Elzestraat')).toBeTruthy()
   expect(screen.getAllByText('Drankleider')).toHaveLength(3) // één keuze per lid
   expect(screen.getByText('Sander')).toBeTruthy()
