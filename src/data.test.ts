@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, expect, test, vi } from 'vitest'
-import { addBak, addGuest, addStreep, removeOne, saveProfile, undo, useEntries, useProfile } from './data'
+import { addBak, addGuest, addStreep, removeOne, saveGroupName, saveProfile, setRole, undo, useEntries, useGroup, useProfile } from './data'
 
 // The Firestore SDK is mocked down to paths and payloads: what we want to know
 // is that the writers land on periods/{pid}/entries with the right delta, and
@@ -108,4 +108,25 @@ test('saveProfile schrijft nick, naam en mail naar users/{uid} zonder de rest te
 test('saveProfile raakt het email-veld van het Google-account niet aan', async () => {
   await saveProfile('u1', 'Wollie', 'Wout D.', 'anders@x.be')
   expect(Object.keys(calls.set[0][1] as object)).not.toContain('email')
+})
+
+test('setRole schrijft alleen de rol, de rest van het profiel blijft staan', async () => {
+  await setRole('u2', 'drankleider')
+  expect(calls.set).toEqual([['users/u2', { role: 'drankleider' }]])
+})
+
+test('de groepsnaam landt op meta/group', async () => {
+  await saveGroupName('Chiro Elzestraat')
+  expect(calls.set).toEqual([['meta/group', { naam: 'Chiro Elzestraat' }]])
+})
+
+/** The bug this guards: Beheer used to be hidden behind `group` being loaded, so a
+ *  missing doc or a denied read (a rules change not yet deployed) silently showed
+ *  the stub instead of the screen. A group name is cosmetic, so it falls back. */
+test('useGroup geeft meteen de standaardnaam, ook voor de eerste snapshot', () => {
+  const { result } = renderHook(() => useGroup())
+  expect(result.current).toEqual({ naam: 'Chiro Elzestraat' })
+
+  act(() => emit!({ data: () => ({ naam: 'Chiro Elzestraat Zuid' }) }))
+  expect(result.current).toEqual({ naam: 'Chiro Elzestraat Zuid' })
 })

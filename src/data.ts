@@ -52,7 +52,41 @@ export function usePeriod() {
   return period
 }
 
-export type Person = { id: string; personRef: string; nick: string; naam: string; isGuest: boolean }
+export type Rol = 'lid' | 'drankleider' | 'beheerder'
+
+export type Group = { naam: string }
+
+const defaultGroup: Group = { naam: 'Chiro Elzestraat' }
+
+/** meta/group, seeded once and then just read, like usePeriod above — except this
+ *  one never returns undefined. A period must be loaded before anything renders
+ *  (its prices are real money), but a group name is cosmetic: falling back to the
+ *  default beats hiding the whole Beheer screen when the doc is missing or the
+ *  read is denied, which is exactly what a not-yet-deployed rules change looks like. */
+export function useGroup() {
+  const [group, setGroup] = useState<Group>(defaultGroup)
+
+  useEffect(() => {
+    const ref = doc(db, 'meta', 'group')
+    getDoc(ref).then((snap) => {
+      if (!snap.exists()) setDoc(ref, defaultGroup)
+    })
+    return onSnapshot(ref, (snap) => {
+      const data = snap.data()
+      if (data) setGroup(data as Group)
+    })
+  }, [])
+
+  return group
+}
+
+export const saveGroupName = (naam: string) =>
+  setDoc(doc(db, 'meta', 'group'), { naam }, { merge: true })
+
+export const setRole = (uid: string, role: Rol) =>
+  setDoc(doc(db, 'users', uid), { role }, { merge: true })
+
+export type Person = { id: string; personRef: string; nick: string; naam: string; isGuest: boolean; role: Rol }
 
 /** users + this period's guests, merged into one list (AC7: guests are current-period-only). */
 export function usePeople(periodId: string | undefined) {
@@ -69,6 +103,8 @@ export function usePeople(periodId: string | undefined) {
             nick: d.data().nick ?? d.data().name ?? '?',
             naam: d.data().name ?? '',
             isGuest: false,
+            // Missing role = lid, so the users already in develop/prod need no migration.
+            role: (d.data().role ?? 'lid') as Rol,
           })),
         ),
       ),
@@ -85,6 +121,7 @@ export function usePeople(periodId: string | undefined) {
           nick: d.data().nick,
           naam: d.data().naam ?? '',
           isGuest: true,
+          role: 'lid',
         })),
       ),
     )

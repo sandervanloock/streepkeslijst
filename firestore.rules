@@ -4,12 +4,28 @@ rules_version = '2';
 // (drankleider, beheerder) land with their own tasks.
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isBeheerder() {
+      return request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'beheerder';
+    }
+
     match /users/{uid} {
-      // Everyone can read the roster; you can only write your own profile
-      // (TASK-5's Mijn profiel). A beheerder writing someone else's doc
-      // arrives with TASK-6.
+      // Everyone can read the roster; you write your own profile (TASK-5's
+      // Mijn profiel), and a beheerder writes anyone's role (TASK-6).
+      // ponytail: "never zero beheerders" needs a count over the whole
+      // collection, which rules cannot do, so it stays a client-side guard in
+      // Beheer.tsx. Worst case a beheerder with devtools open demotes the last
+      // one and the role is restored from the console, same as the first-time seed.
       allow read: if request.auth != null;
-      allow write: if request.auth.uid == uid;
+      allow write: if request.auth.uid == uid || isBeheerder();
+    }
+
+    match /meta/group {
+      // Seeded on first load by useGroup (data.ts), renamed only in Beheer.
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if isBeheerder();
+      allow delete: if false;
     }
 
     match /meta/period {

@@ -8,13 +8,17 @@ import {
   removeOne,
   undo,
   useEntries,
+  useGroup,
   usePeople,
   usePeriod,
 } from './data'
+import type { Rol } from './data'
 import { euro, totals } from './period'
 import { tally } from './tally'
 import { signOut } from './auth'
 import { Profiel } from './Profiel'
+import { Beheer } from './Beheer'
+import { useScherm } from './route'
 
 // Small building blocks shared by the two bottom sheets and the side panel
 // (design lines 533-735). Ported section by section, Dutch copy verbatim.
@@ -23,8 +27,16 @@ const paper = '#F4F1E6'
 const lime = '#D8F651'
 const amber = '#F0A32B'
 const red = '#E4483A'
+const purple = '#7A4BD1'
 
 const HOLD_MS = 620
+
+/** The header line. The title keeps the design's 26px, but its line box is the
+ *  chip's full height, so the two are exactly the same height and the text sits
+ *  dead centre against the button — Anton's high cap height makes plain
+ *  align-items:center look a notch too high. */
+const KOPHOOGTE = 44
+const KOPFONT = 26
 
 /** Design lines 958-974: a WebAudio noise burst + a vibrate, gated by the sound toggle. */
 function useKlik(geluid: boolean) {
@@ -59,10 +71,55 @@ function useKlik(geluid: boolean) {
   }
 }
 
-type Snack = { id: string; tekst: string; kleur: string }
+/** The avatar + hamburger chip. Every screen carries it (design lines 271-280):
+ *  the menu is the only way between screens, so there is no back arrow anywhere. */
+function MenuChip({ nick, onOpen }: { nick: string; onOpen: () => void }) {
+  return (
+    <div
+      onClick={onOpen}
+      style={{
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        height: KOPHOOGTE,
+        padding: '0 12px 0 5px',
+        borderRadius: 99,
+        background: 'rgba(244,241,230,.07)',
+        border: '1px solid rgba(244,241,230,.12)',
+        cursor: 'pointer',
+        flex: 'none',
+      }}
+    >
+      <div
+        style={{
+          width: 34,
+          height: 34,
+          borderRadius: 99,
+          background: lime,
+          color: '#121310',
+          font: '700 13px/34px "Space Grotesk",sans-serif',
+          textAlign: 'center',
+          flex: 'none',
+        }}
+      >
+        {nick[0]?.toUpperCase()}
+      </div>
+      <span style={{ font: '500 12px "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.85)' }}>{nick}</span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: 'none', marginLeft: 2 }}>
+        <div style={{ width: 15, height: 2, borderRadius: 1, background: 'rgba(244,241,230,.7)' }} />
+        <div style={{ width: 15, height: 2, borderRadius: 1, background: 'rgba(244,241,230,.7)' }} />
+        <div style={{ width: 15, height: 2, borderRadius: 1, background: 'rgba(244,241,230,.7)' }} />
+      </div>
+    </div>
+  )
+}
+
+type Snack = { id?: string; tekst: string; kleur: string }
 
 export function Lijst({ user }: { user: User }) {
   const period = usePeriod()
+  const group = useGroup()
   const pid = period ? pidOf(period.nr) : undefined
   const people = usePeople(pid)
   const entries = useEntries(pid)
@@ -86,7 +143,7 @@ export function Lijst({ user }: { user: User }) {
   const [nieuwFout, setNieuwFout] = useState<string>()
 
   const [menuOpen, setMenuOpen] = useState(false)
-  const [scherm, setScherm] = useState<string>()
+  const [scherm, setScherm] = useScherm()
 
   const [snack, setSnack] = useState<Snack>()
   const [snackFade, setSnackFade] = useState(false)
@@ -103,7 +160,7 @@ export function Lijst({ user }: { user: User }) {
   const myRef = 'user:' + user.uid
   const myNick = people.find((p) => p.personRef === myRef)?.nick ?? user.displayName?.split(' ')[0] ?? '?'
 
-  const zegSnack = (id: string, tekst: string, kleur: string) => {
+  const zegSnack = (id: string | undefined, tekst: string, kleur: string) => {
     snackTimers.current.forEach(clearTimeout)
     setSnack({ id, tekst, kleur })
     setSnackFade(false)
@@ -207,30 +264,80 @@ export function Lijst({ user }: { user: User }) {
       : 'TIK = +1 · VASTHOUDEN = BAK'
   const chipOpacity = period.open ? 1 : 0.4
 
-  const nav = ['Lijst', 'Afsluiten', 'Beheer', 'Mijn profiel', 'Betalen', 'Inningen', 'Meldingen']
+  const myRole = people.find((p) => p.personRef === myRef)?.role ?? 'lid'
+  // Label plus, where it applies, the role the destination belongs to (design
+  // lines 556-562: slot = DRANKLEIDER, admin = BEHEERDER). Only Beheer is hidden
+  // outright — the design's enkelAdmin — the drankleider screens stay listed.
+  const nav: { label: string; rol?: Rol }[] = [
+    { label: 'De lijst' },
+    { label: 'Mijn profiel' },
+    { label: 'Meldingen' },
+    { label: 'Betalen' },
+    { label: 'Inningen', rol: 'drankleider' },
+    { label: 'Periode afsluiten', rol: 'drankleider' },
+    // design line 1705: Beheer is enkelAdmin, everyone else never sees it.
+    ...(myRole === 'beheerder' ? [{ label: 'Beheer', rol: 'beheerder' as Rol }] : []),
+  ]
 
-  if (scherm) {
-    // ponytail: every destination except lijst and Mijn profiel is a stub, per
-    // TASK-3 scope. Real screens (and their own state) land in their own tasks.
-    return (
-      <main style={{ minHeight: '100vh', background: '#121310', color: paper, padding: '58px 18px 0', display: 'flex', flexDirection: 'column' }}>
-        <div
-          onClick={() => setScherm(undefined)}
-          style={{ display: 'inline-block', cursor: 'pointer', font: '500 12px "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.7)' }}
-        >
-          ← Terug
+  // With the screen in the URL, #/beheer is typeable by anyone — a lid who lands
+  // there goes to the lijst, not to a blank screen.
+  const open = scherm && (scherm !== 'Beheer' || myRole === 'beheerder') ? scherm : undefined
+  const toast = (tekst: string) => zegSnack(undefined, tekst, lime)
+
+  // ponytail: every destination except lijst, Mijn profiel and Beheer is a stub,
+  // per TASK-3 scope. Real screens land in their own tasks.
+  // The title sits on the chip's row, the same way the lijst's own h1 does, so
+  // every screen has one header line instead of a title stacked under the chip.
+  // The role badge rides along with it (design line 179).
+  const openRol = nav.find((t) => t.label === open)?.rol
+
+  const scherminhoud = (
+    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '58px 18px 34px', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+          {openRol && (
+            <span
+              style={{
+                flex: 'none',
+                font: '400 9px/1 Anton,sans-serif',
+                letterSpacing: '.1em',
+                padding: '4px 5px',
+                borderRadius: 2,
+                background: openRol === 'beheerder' ? purple : lime,
+                color: openRol === 'beheerder' ? paper : '#121310',
+              }}
+            >
+              {openRol.toUpperCase()}
+            </span>
+          )}
+          <h1
+            style={{
+              flex: 1,
+              minWidth: 0,
+              margin: 0,
+              font: `400 ${KOPFONT}px/${KOPHOOGTE}px Anton,sans-serif`,
+              letterSpacing: '-.01em',
+              color: paper,
+              textTransform: 'uppercase',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {open}
+          </h1>
         </div>
-        {scherm === 'Mijn profiel' ? (
-          <Profiel user={user} people={people} period={period} onTerug={() => setScherm(undefined)} />
-        ) : (
-          <>
-            <h1 style={{ font: '400 30px/1 Anton,sans-serif', textTransform: 'uppercase', marginTop: 16 }}>{scherm}</h1>
-            <p style={{ font: '500 12px "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.5)' }}>Komt nog.</p>
-          </>
-        )}
-      </main>
-    )
-  }
+        <MenuChip nick={myNick} onOpen={() => setMenuOpen(true)} />
+      </div>
+      {open === 'Mijn profiel' ? (
+        <Profiel user={user} people={people} period={period} onToast={toast} />
+      ) : open === 'Beheer' ? (
+        <Beheer user={user} people={people} group={group} onToast={toast} />
+      ) : (
+        <p style={{ font: '500 12px "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.5)' }}>Komt nog.</p>
+      )}
+    </div>
+  )
 
   return (
     <div
@@ -242,6 +349,7 @@ export function Lijst({ user }: { user: User }) {
         flexDirection: 'column',
       }}
     >
+      {open ? scherminhoud : (
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '58px 0 34px' }}>
         <div style={{ padding: '0 18px 12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
@@ -250,7 +358,7 @@ export function Lijst({ user }: { user: User }) {
                 flex: 1,
                 minWidth: 0,
                 margin: 0,
-                font: "400 26px/1 Anton,sans-serif",
+                font: `400 ${KOPFONT}px/${KOPHOOGTE}px Anton,sans-serif`,
                 letterSpacing: '-.01em',
                 color: paper,
                 textTransform: 'uppercase',
@@ -261,43 +369,7 @@ export function Lijst({ user }: { user: User }) {
             >
               Streepkeslijst
             </h1>
-            <div
-              onClick={() => setMenuOpen(true)}
-              style={{
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                height: 44,
-                padding: '0 12px 0 5px',
-                borderRadius: 99,
-                background: 'rgba(244,241,230,.07)',
-                border: '1px solid rgba(244,241,230,.12)',
-                cursor: 'pointer',
-                flex: 'none',
-              }}
-            >
-              <div
-                style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: 99,
-                  background: lime,
-                  color: '#121310',
-                  font: '700 13px/34px "Space Grotesk",sans-serif',
-                  textAlign: 'center',
-                  flex: 'none',
-                }}
-              >
-                {myNick[0]?.toUpperCase()}
-              </div>
-              <span style={{ font: '500 12px "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.85)' }}>{myNick}</span>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: 'none', marginLeft: 2 }}>
-                <div style={{ width: 15, height: 2, borderRadius: 1, background: 'rgba(244,241,230,.7)' }} />
-                <div style={{ width: 15, height: 2, borderRadius: 1, background: 'rgba(244,241,230,.7)' }} />
-                <div style={{ width: 15, height: 2, borderRadius: 1, background: 'rgba(244,241,230,.7)' }} />
-              </div>
-            </div>
+            <MenuChip nick={myNick} onOpen={() => setMenuOpen(true)} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
             <span style={{ background: lime, color: '#121310', font: '400 11px/1 Anton,sans-serif', letterSpacing: '.06em', padding: '5px 7px', borderRadius: 3 }}>
@@ -466,6 +538,7 @@ export function Lijst({ user }: { user: User }) {
           </div>
         </div>
       </div>
+      )}
 
       {menuOpen && (
         <>
@@ -514,19 +587,34 @@ export function Lijst({ user }: { user: User }) {
 
             <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '18px 0 34px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 1, background: 'rgba(244,241,230,.08)' }}>
-                {nav.map((label) => (
+                {nav.map(({ label, rol }) => (
                   <div
                     key={label}
                     onClick={() => {
                       setMenuOpen(false)
-                      if (label !== 'Lijst') setScherm(label)
+                      setScherm(label === 'De lijst' ? undefined : label)
                     }}
-                    style={{ background: label === 'Lijst' && !scherm ? '#1B1D17' : 'transparent', padding: '15px 18px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', position: 'relative' }}
+                    style={{ background: label === open || (label === 'De lijst' && !open) ? '#1B1D17' : 'transparent', padding: '15px 18px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', position: 'relative' }}
                   >
-                    {label === 'Lijst' && <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: lime }} />}
+                    {(label === open || (label === 'De lijst' && !open)) && <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: lime }} />}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ font: '400 19px/1 Anton,sans-serif', letterSpacing: '.02em', textTransform: 'uppercase', color: paper }}>{label}</div>
                     </div>
+                    {rol && (
+                      <div
+                        style={{
+                          flex: 'none',
+                          font: '400 9px/1 Anton,sans-serif',
+                          letterSpacing: '.1em',
+                          padding: '4px 5px',
+                          borderRadius: 2,
+                          background: rol === 'beheerder' ? purple : lime,
+                          color: rol === 'beheerder' ? paper : '#121310',
+                        }}
+                      >
+                        {rol.toUpperCase()}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -669,15 +757,18 @@ export function Lijst({ user }: { user: User }) {
           }}
         >
           <span style={{ flex: 1, font: '500 12px/1.35 "Space Grotesk",sans-serif' }}>{snack.tekst}</span>
-          <span
-            onClick={() => {
-              undo(pid, snack.id)
-              setSnack(undefined)
-            }}
-            style={{ flex: 'none', font: '700 10.5px "Space Grotesk",sans-serif', letterSpacing: '.06em', textDecoration: 'underline', cursor: 'pointer' }}
-          >
-            ONGEDAAN
-          </span>
+          {/* Only a booking can be undone; a Beheer toast has no entry behind it. */}
+          {snack.id && (
+            <span
+              onClick={() => {
+                undo(pid, snack.id!)
+                setSnack(undefined)
+              }}
+              style={{ flex: 'none', font: '700 10.5px "Space Grotesk",sans-serif', letterSpacing: '.06em', textDecoration: 'underline', cursor: 'pointer' }}
+            >
+              ONGEDAAN
+            </span>
+          )}
         </div>
       )}
 

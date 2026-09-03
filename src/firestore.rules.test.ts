@@ -99,6 +99,34 @@ test('AC8: je kan je eigen profiel schrijven, niet dat van iemand anders', async
   await assertSucceeds(getDoc(doc(wollie(), 'users', 'u1'))) // iedereen mag de rest wel lezen
 })
 
+/** TASK-6: a beheerder hands out roles and renames the group; a lid does neither.
+ *  The role is read out of the writer's own users doc, so it has to be seeded
+ *  with the admin context that bypasses the rules. */
+test('alleen een beheerder zet rollen en de groepsnaam', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const db = ctx.firestore()
+    await setDoc(doc(db, 'users', 'u1'), { nick: 'Sander', role: 'beheerder' })
+    await setDoc(doc(db, 'users', 'u2'), { nick: 'Wollie', role: 'lid' })
+    await setDoc(doc(db, 'meta', 'group'), { naam: 'Chiro Elzestraat' })
+  })
+
+  // Sander beheert: hij mag Wollie drankleider maken en de groep herdopen.
+  await assertSucceeds(updateDoc(doc(sander(), 'users', 'u2'), { role: 'drankleider' }))
+  await assertSucceeds(updateDoc(doc(sander(), 'meta', 'group'), { naam: 'Chiro Elzestraat Zuid' }))
+
+  // Wollie is maar een lid: geen rollen, geen groepsnaam, ook niet voor zichzelf.
+  await assertFails(updateDoc(doc(wollie(), 'users', 'u1'), { role: 'lid' }))
+  await assertFails(updateDoc(doc(wollie(), 'meta', 'group'), { naam: 'Chiro Wollie' }))
+})
+
+test('je eigen profiel blijft van jou, ook als je geen beheerder bent', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'users', 'u2'), { nick: 'Wollie', role: 'lid' })
+  })
+
+  await assertSucceeds(updateDoc(doc(wollie(), 'users', 'u2'), { nick: 'Wout' }))
+})
+
 test('zonder login kom je er niet in', async () => {
   const gast = env.unauthenticatedContext().firestore()
 

@@ -8,7 +8,7 @@ import { Lijst } from './Lijst'
 // the hooks read it back and re-render, which is exactly the loop the real
 // onSnapshot listeners drive. Everything above the data layer is the real thing.
 type Row = Entry & { id: string; by: string; byNick: string }
-const store = { entries: [] as Row[], guests: [] as { nick: string; naam: string; pid: string }[] }
+const store = { entries: [] as Row[], guests: [] as { nick: string; naam: string; pid: string }[], mijnRol: 'lid' }
 const listeners = new Set<() => void>()
 let n = 0
 
@@ -36,9 +36,9 @@ vi.mock('./data', async () => {
     usePeople: () => {
       live()
       return [
-        { id: 'u1', personRef: 'user:u1', nick: 'Sander', naam: 'Sander V.', isGuest: false },
-        { id: 'u2', personRef: 'user:u2', nick: 'Anton', naam: 'Anton B.', isGuest: false },
-        ...store.guests.map((g, i) => ({ id: 'g' + i, personRef: 'guest:g' + i, ...g, isGuest: true })),
+        { id: 'u1', personRef: 'user:u1', nick: 'Sander', naam: 'Sander V.', isGuest: false, role: store.mijnRol },
+        { id: 'u2', personRef: 'user:u2', nick: 'Anton', naam: 'Anton B.', isGuest: false, role: 'lid' },
+        ...store.guests.map((g, i) => ({ id: 'g' + i, personRef: 'guest:g' + i, ...g, isGuest: true, role: 'lid' })),
       ]
     },
     useEntries: () => {
@@ -59,8 +59,11 @@ vi.mock('./data', async () => {
       listeners.forEach((l) => l())
       return Promise.resolve({ id: 'g' })
     },
-    useProfile: () => ({ nick: 'Sander', naam: 'Sander V.', email: 'sander@x.be' }),
+    useProfile: () => ({ nick: 'Sander', naam: 'Sander V.', mail: 'sander@x.be' }),
     saveProfile: vi.fn(() => Promise.resolve()),
+    useGroup: () => ({ naam: 'Chiro Elzestraat' }),
+    saveGroupName: vi.fn(() => Promise.resolve()),
+    setRole: vi.fn(() => Promise.resolve()),
   }
 })
 
@@ -89,8 +92,10 @@ beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true })
   store.entries = []
   store.guests = []
+  store.mijnRol = 'lid'
   n = 0
   localStorage.clear()
+  location.hash = ''
 })
 
 afterEach(() => {
@@ -220,4 +225,100 @@ test('AC1: Mijn profiel in het menu opent het echte scherm, geen stub', async ()
 
   expect(screen.queryByText('Komt nog.')).toBeNull()
   expect(screen.getByText('Zo staat je naam op de lijst en in de mededeling van je betaling.')).toBeTruthy()
+})
+
+test('AC2: Beheer staat alleen in het menu voor een beheerder', () => {
+  render(<Lijst user={me} />)
+  fireEvent.click(screen.getAllByText('Sander')[0]) // het menu-chipje bovenaan
+
+  expect(screen.queryByText('Beheer')).toBeNull() // Sander is nog maar een lid
+})
+
+test('AC2 + AC3: een beheerder ziet Beheer en opent het echte scherm', () => {
+  store.mijnRol = 'beheerder'
+  render(<Lijst user={me} />)
+
+  fireEvent.click(screen.getAllByText('Sander')[0])
+  fireEvent.click(screen.getByText('Beheer'))
+
+  expect(screen.queryByText('Komt nog.')).toBeNull()
+  expect(screen.getByText('Wie zit in de groep, wie mag wat. Alleen beheerders zien deze pagina.')).toBeTruthy()
+})
+
+test('het menu badget elke bestemming met de rol die ze vraagt', () => {
+  store.mijnRol = 'beheerder'
+  render(<Lijst user={me} />)
+  fireEvent.click(screen.getAllByText('Sander')[0])
+
+  expect(screen.getAllByText('DRANKLEIDER')).toHaveLength(2) // Afsluiten en Inningen
+  expect(screen.getByText('BEHEERDER')).toBeTruthy() // Beheer
+  expect(screen.queryByText('LID')).toBeNull() // wat iedereen mag krijgt geen badge
+})
+
+test('de openstaande pagina staat in de url, dus een refresh blijft staan', () => {
+  store.mijnRol = 'beheerder'
+  render(<Lijst user={me} />)
+
+  fireEvent.click(screen.getAllByText('Sander')[0])
+  fireEvent.click(screen.getByText('Beheer'))
+  expect(location.hash).toBe('#/beheer')
+
+  // een refresh is een nieuwe render met dezelfde hash
+  cleanup()
+  render(<Lijst user={me} />)
+  expect(screen.getByText('Wie zit in de groep, wie mag wat. Alleen beheerders zien deze pagina.')).toBeTruthy()
+})
+
+test('het menu blijft op elk scherm bereikbaar, er is geen terugpijl', () => {
+  render(<Lijst user={me} />)
+
+  fireEvent.click(screen.getAllByText('Sander')[0])
+  fireEvent.click(screen.getByText('Mijn profiel'))
+
+  expect(screen.queryByText('← Terug')).toBeNull()
+  // het chipje staat er nog, dus je kan van hier naar elk ander scherm
+  fireEvent.click(screen.getAllByText('Sander')[0])
+  fireEvent.click(screen.getByText('Betalen'))
+  expect(screen.getByText('Komt nog.')).toBeTruthy()
+})
+
+test('een lid dat #/beheer intikt komt op de lijst, niet op een leeg scherm', () => {
+  location.hash = '#/beheer'
+  render(<Lijst user={me} />) // Sander is een lid
+
+  expect(screen.getByText('PERIODE 1 · LIVE')).toBeTruthy()
+})
+
+test('via De lijst in het menu kom je terug op de lijst', () => {
+  render(<Lijst user={me} />)
+
+  fireEvent.click(screen.getAllByText('Sander')[0])
+  fireEvent.click(screen.getByText('Mijn profiel'))
+  expect(location.hash).toBe('#/profiel')
+
+  fireEvent.click(screen.getAllByText('Sander')[0])
+  fireEvent.click(screen.getByText('De lijst'))
+
+  expect(location.hash).toBe('#/')
+  expect(screen.getByText('PERIODE 1 · LIVE')).toBeTruthy()
+})
+
+test('de titel staat op de regel van het menuknopje, met de rolbadge erbij', () => {
+  store.mijnRol = 'beheerder'
+  location.hash = '#/beheer'
+  render(<Lijst user={me} />)
+
+  // titel, badge en chipje staan samen in één kop, niet gestapeld
+  const kop = screen.getByText('Beheer').parentElement!.parentElement!
+  expect(kop.textContent).toContain('BEHEERDER')
+  expect(kop.textContent).toContain('Beheer')
+  expect(kop.textContent).toContain('Sander') // het menuchipje
+})
+
+test('een scherm zonder rol krijgt gewoon de titel, geen badge', () => {
+  location.hash = '#/betalen'
+  render(<Lijst user={me} />)
+
+  expect(screen.getByText('Betalen')).toBeTruthy()
+  expect(screen.queryByText('DRANKLEIDER')).toBeNull()
 })
