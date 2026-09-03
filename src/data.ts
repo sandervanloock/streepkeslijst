@@ -5,6 +5,7 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  increment,
   onSnapshot,
   serverTimestamp,
   setDoc,
@@ -208,3 +209,51 @@ export function useProfile(uid: string) {
  *  already use `mail` for their afrekening address (addGuest). */
 export const saveProfile = (uid: string, nick: string, naam: string, mail: string) =>
   setDoc(doc(db, 'users', uid), { nick, name: naam, mail }, { merge: true })
+
+export type Invite = { email: string; by: string; byNick: string; herinnerd: number; at?: { toDate: () => Date } }
+
+/** invites/{email}, doc id the lowercased address — the invite doc IS the access
+ *  grant (TASK-7's delivery decision: the app doesn't send mail, see auth.ts and
+ *  firestore.rules). "Already invited" is therefore an exists check, never a
+ *  query, same reasoning as periodId elsewhere in this file. */
+export function useInvites() {
+  const [invites, setInvites] = useState<(Invite & { id: string })[]>([])
+
+  useEffect(
+    () =>
+      onSnapshot(collection(db, 'invites'), (snap) =>
+        setInvites(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Invite) }))),
+      ),
+    [],
+  )
+
+  return invites
+}
+
+export const createInvite = (email: string, byUid: string, byNick: string) =>
+  setDoc(doc(db, 'invites', email), { email, by: byUid, byNick, at: serverTimestamp(), herinnerd: 0, lastShared: serverTimestamp() })
+
+export const bumpInvite = (email: string) =>
+  setDoc(doc(db, 'invites', email), { herinnerd: increment(1), lastShared: serverTimestamp() }, { merge: true })
+
+export const revokeInvite = (email: string) => deleteDoc(doc(db, 'invites', email))
+
+/** Builds the Dutch invitation text and hands it to the Web Share API (one tap
+ *  into WhatsApp on mobile), falling back to a clipboard copy on a browser
+ *  without navigator.share (desktop Firefox). The invite doc already exists
+ *  either way — this is only the beheerder's own reminder text, never a claim
+ *  that the invitee was notified (TASK-7 AC4). */
+export async function shareInvite(email: string, groupNaam: string): Promise<'gedeeld' | 'gekopieerd'> {
+  const tekst = `Je bent uitgenodigd voor de streepjeslijst van ${groupNaam}. Meld je aan met Google op ${email} — ${location.origin}`
+  if (navigator.share) {
+    try {
+      await navigator.share({ text: tekst })
+    } catch (e) {
+      // De gebruiker sloot het deelvenster — het uitnodigingsdoc blijft gewoon staan.
+      if (!(e instanceof Error && e.name === 'AbortError')) throw e
+    }
+    return 'gedeeld'
+  }
+  await navigator.clipboard.writeText(tekst)
+  return 'gekopieerd'
+}

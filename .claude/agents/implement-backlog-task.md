@@ -1,6 +1,6 @@
 ---
 name: implement-backlog-task
-description: Implement one Backlog.md task in this repo end to end — branch, plan of record, slice-by-slice implementation, verification, finalization, push. Use when the user says "implement TASK-N", "do task N", or "pick up TASK-N". Not for creating or planning tasks, and not for work that has no Backlog task.
+description: Implement one Backlog.md task in this repo end to end — branch, plan of record, slice-by-slice implementation, verification, finalization. Stops uncommitted for the user to manually validate; does not commit or push. Use when the user says "implement TASK-N", "do task N", or "pick up TASK-N". Not for creating or planning tasks, and not for work that has no Backlog task.
 model: sonnet
 ---
 
@@ -76,9 +76,8 @@ House style, non-negotiable (see `CLAUDE.md` and the existing files):
 - A deliberate shortcut with a known ceiling gets a `ponytail:` comment naming
   the ceiling and the upgrade path.
 
-Stage only the files belonging to the task; leave unrelated working-tree changes
-alone. Reference the task id in every commit subject, e.g.
-`Add the profile screen (TASK-5)`.
+Do not commit during this step. Leave changes in the working tree — staged is
+fine, committed is not — until manual validation (step 5a) has happened.
 
 ## 4. Verify
 
@@ -104,14 +103,38 @@ backlog instructions task-finalization
 Follow it: verify each AC against evidence, `--check-ac` the ones that hold,
 write the `--final-summary`, move to the terminal status.
 
-## 6. Push, then stop
+Automated evidence (build, unit tests, rules tests) proves the code does what
+it claims in isolation. It does not prove the feature works — today's TASK-7
+run had 77 green tests and a real `permission-denied` in the browser twice
+over, from things no unit test touches: `firestore.rules` not deployed, then a
+silently-broken `firebase-tools` flag. Say so plainly rather than treating
+green CI as done.
+
+### 5a. Hand off for manual validation — do not commit yet
+
+Stop here with the work **uncommitted**. Tell the user exactly what to run or
+click to see the behaviour for themselves (a page to open, a button to press,
+a command to run against the real `develop` backend) and wait for them to
+confirm it actually works. Automated checks passing is not that confirmation.
+
+If validation surfaces a bug, fix it in place and ask for validation again —
+same branch, still uncommitted. Do not commit a fix speculatively because the
+tests pass.
+
+## 6. Commit — only after manual validation, then stop
+
+Once the user has confirmed the behaviour works, commit what belongs to the
+task. Stage only the files belonging to the task; leave unrelated
+working-tree changes alone. Reference the task id in every commit subject,
+e.g. `Add the profile screen (TASK-5)`.
 
 ```bash
-git push -u origin task-<id>-<short-slug>
+git commit -m "..."
 ```
 
-**Stop there.** Opening the PR, reviewing and merging is the user's job. Do not
-open, merge or squash anything unasked.
+**Do not push, and do not open a PR.** Committing and handing back is the end
+of this agent's job — pushing the branch, opening the PR, reviewing and
+merging are the user's to do when they're ready.
 
 ## Scope discipline
 
@@ -123,7 +146,9 @@ and let the user decide. Never silently widen the task.
 
 Short: branch name, what changed (files), which ACs are checked and on what
 evidence, which are not and why, and anything the user must do by hand (a
-console seed, a config toggle, a decision left open).
+console seed, a config toggle, a decision left open). If the work is still
+uncommitted pending manual validation, say that explicitly and state what you
+need the user to check.
 
 ## Lessons from earlier runs
 
@@ -158,4 +183,14 @@ These cost real time on TASK-5 and TASK-6. Read them before you start.
 - **The sandbox blocks the emulator and git push.** `npm run test:rules` cannot
   bind its ports and `git push` cannot reach the remote. Both work with the
   sandbox disabled for that one command. Retry that way, and say in your report
-  that you did.
+  that you did. (This agent no longer pushes at all — see step 6 — but the
+  emulator point still applies to `npm run test:rules`.)
+- **Green tests aren't the same as working.** TASK-7 passed build + 77 unit
+  tests + 13 rules-emulator tests, then failed twice in the real browser: once
+  because `firestore.rules` genuinely wasn't deployed, and again — after a
+  deploy that reported success — because `firebase-tools@15.5.1` silently
+  no-ops `--only firestore:rules` against this repo's array-form multi-database
+  `firebase.json` (it parses `rules` as a database name, matches none, deploys
+  nothing, prints "Deploy complete!" anyway; `--only firestore` is the working
+  form). Neither failure was visible to any test in this repo. This is exactly
+  why manual validation gates the commit now, not just CI.

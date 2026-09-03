@@ -39,6 +39,11 @@ export const magRolWijzigen = (
   nieuweRol === 'beheerder' ||
   rollen.some((r) => r.role === 'beheerder' && r.id !== id)
 
+/** A simple email-shape check, good enough to catch typos — not full RFC 5322.
+ *  Firestore doesn't validate document ids for us, so this is what gates an
+ *  invite (TASK-7's VOLK ERBIJ HALEN, AC2). */
+export const geldigeMail = (mail: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)
+
 /** 'dd/mm' from an ISO date, design's kort() (line 883-886). */
 export const kort = (iso: string) => iso.slice(8) + '/' + iso.slice(5, 7)
 
