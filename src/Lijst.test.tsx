@@ -245,17 +245,6 @@ test('AC2 + AC3: een beheerder ziet Beheer en opent het echte scherm', () => {
   expect(screen.getByText('Wie zit in de groep, wie mag wat. Alleen beheerders zien deze pagina.')).toBeTruthy()
 })
 
-test('het menu zet onder elk label de sub-regel uit het ontwerp', () => {
-  store.mijnRol = 'beheerder'
-  render(<Lijst user={me} />)
-  fireEvent.click(screen.getAllByText('Sander')[0])
-
-  expect(screen.getByText('2 leiders · 0 streepjes')).toBeTruthy()
-  expect(screen.getByText('je bijnaam op de lijst · Sander')).toBeTruthy()
-  expect(screen.getByText('nog geen einddatum gekozen')).toBeTruthy()
-  expect(screen.getByText('Chiro Elzestraat')).toBeTruthy()
-})
-
 test('het menu badget elke bestemming met de rol die ze vraagt', () => {
   store.mijnRol = 'beheerder'
   render(<Lijst user={me} />)
@@ -297,5 +286,19 @@ test('een lid dat #/beheer intikt komt op de lijst, niet op een leeg scherm', ()
   location.hash = '#/beheer'
   render(<Lijst user={me} />) // Sander is een lid
 
+  expect(screen.getByText('PERIODE 1 · LIVE')).toBeTruthy()
+})
+
+test('via De lijst in het menu kom je terug op de lijst', () => {
+  render(<Lijst user={me} />)
+
+  fireEvent.click(screen.getAllByText('Sander')[0])
+  fireEvent.click(screen.getByText('Mijn profiel'))
+  expect(location.hash).toBe('#/profiel')
+
+  fireEvent.click(screen.getAllByText('Sander')[0])
+  fireEvent.click(screen.getByText('De lijst'))
+
+  expect(location.hash).toBe('#/')
   expect(screen.getByText('PERIODE 1 · LIVE')).toBeTruthy()
 })

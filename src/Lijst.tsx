@@ -258,25 +258,18 @@ export function Lijst({ user }: { user: User }) {
   const chipOpacity = period.open ? 1 : 0.4
 
   const myRole = people.find((p) => p.personRef === myRef)?.role ?? 'lid'
-  // design lines 1697-1705: every entry carries a sub line. The three that need
-  // afrekeningen, inningen or meldingen have no data to read yet, so they stay
-  // without one until those screens are built.
-  // The badge says which role a destination belongs to (design lines 556-562:
-  // slot = DRANKLEIDER, admin = BEHEERDER). Only Beheer is hidden outright —
-  // the design's enkelAdmin — the drankleider screens stay listed and badged.
-  const nav: { label: string; sub?: string; rol?: Rol }[] = [
-    { label: 'De lijst', sub: people.length + ' leiders · ' + totStreep + ' streepjes' },
-    { label: 'Mijn profiel', sub: 'je bijnaam op de lijst · ' + myNick },
+  // Label plus, where it applies, the role the destination belongs to (design
+  // lines 556-562: slot = DRANKLEIDER, admin = BEHEERDER). Only Beheer is hidden
+  // outright — the design's enkelAdmin — the drankleider screens stay listed.
+  const nav: { label: string; rol?: Rol }[] = [
+    { label: 'De lijst' },
+    { label: 'Mijn profiel' },
     { label: 'Meldingen' },
     { label: 'Betalen' },
     { label: 'Inningen', rol: 'drankleider' },
-    {
-      label: 'Periode afsluiten',
-      sub: period.eind ? 'laatste dag ' + period.eind + ' · ' + euro(period.bakPrijs) + ' per BAK' : 'nog geen einddatum gekozen',
-      rol: 'drankleider',
-    },
+    { label: 'Periode afsluiten', rol: 'drankleider' },
     // design line 1705: Beheer is enkelAdmin, everyone else never sees it.
-    ...(myRole === 'beheerder' ? [{ label: 'Beheer', sub: group.naam, rol: 'beheerder' as Rol }] : []),
+    ...(myRole === 'beheerder' ? [{ label: 'Beheer', rol: 'beheerder' as Rol }] : []),
   ]
 
   // With the screen in the URL, #/beheer is typeable by anyone — a lid who lands
@@ -553,21 +546,18 @@ export function Lijst({ user }: { user: User }) {
 
             <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '18px 0 34px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 1, background: 'rgba(244,241,230,.08)' }}>
-                {nav.map(({ label, sub, rol }) => (
+                {nav.map(({ label, rol }) => (
                   <div
                     key={label}
                     onClick={() => {
                       setMenuOpen(false)
-                      if (label !== 'De lijst') setScherm(label)
+                      setScherm(label === 'De lijst' ? undefined : label)
                     }}
                     style={{ background: label === open || (label === 'De lijst' && !open) ? '#1B1D17' : 'transparent', padding: '15px 18px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', position: 'relative' }}
                   >
                     {(label === open || (label === 'De lijst' && !open)) && <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: lime }} />}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ font: '400 19px/1 Anton,sans-serif', letterSpacing: '.02em', textTransform: 'uppercase', color: paper }}>{label}</div>
-                      {sub && (
-                        <div style={{ font: '400 10.5px/1.45 "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.38)', marginTop: 4 }}>{sub}</div>
-                      )}
                     </div>
                     {rol && (
                       <div
