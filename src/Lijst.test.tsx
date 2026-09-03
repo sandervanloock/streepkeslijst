@@ -95,6 +95,7 @@ beforeEach(() => {
   store.mijnRol = 'lid'
   n = 0
   localStorage.clear()
+  location.hash = ''
 })
 
 afterEach(() => {
@@ -263,4 +264,38 @@ test('het menu badget elke bestemming met de rol die ze vraagt', () => {
   expect(screen.getAllByText('DRANKLEIDER')).toHaveLength(2) // Afsluiten en Inningen
   expect(screen.getByText('BEHEERDER')).toBeTruthy() // Beheer
   expect(screen.queryByText('LID')).toBeNull() // wat iedereen mag krijgt geen badge
+})
+
+test('de openstaande pagina staat in de url, dus een refresh blijft staan', () => {
+  store.mijnRol = 'beheerder'
+  render(<Lijst user={me} />)
+
+  fireEvent.click(screen.getAllByText('Sander')[0])
+  fireEvent.click(screen.getByText('Beheer'))
+  expect(location.hash).toBe('#/beheer')
+
+  // een refresh is een nieuwe render met dezelfde hash
+  cleanup()
+  render(<Lijst user={me} />)
+  expect(screen.getByText('Wie zit in de groep, wie mag wat. Alleen beheerders zien deze pagina.')).toBeTruthy()
+})
+
+test('het menu blijft op elk scherm bereikbaar, er is geen terugpijl', () => {
+  render(<Lijst user={me} />)
+
+  fireEvent.click(screen.getAllByText('Sander')[0])
+  fireEvent.click(screen.getByText('Mijn profiel'))
+
+  expect(screen.queryByText('← Terug')).toBeNull()
+  // het chipje staat er nog, dus je kan van hier naar elk ander scherm
+  fireEvent.click(screen.getAllByText('Sander')[0])
+  fireEvent.click(screen.getByText('Betalen'))
+  expect(screen.getByText('Komt nog.')).toBeTruthy()
+})
+
+test('een lid dat #/beheer intikt komt op de lijst, niet op een leeg scherm', () => {
+  location.hash = '#/beheer'
+  render(<Lijst user={me} />) // Sander is een lid
+
+  expect(screen.getByText('PERIODE 1 · LIVE')).toBeTruthy()
 })

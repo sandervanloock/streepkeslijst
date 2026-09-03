@@ -18,6 +18,7 @@ import { tally } from './tally'
 import { signOut } from './auth'
 import { Profiel } from './Profiel'
 import { Beheer } from './Beheer'
+import { useScherm } from './route'
 
 // Small building blocks shared by the two bottom sheets and the side panel
 // (design lines 533-735). Ported section by section, Dutch copy verbatim.
@@ -63,6 +64,50 @@ function useKlik(geluid: boolean) {
   }
 }
 
+/** The avatar + hamburger chip. Every screen carries it (design lines 271-280):
+ *  the menu is the only way between screens, so there is no back arrow anywhere. */
+function MenuChip({ nick, onOpen }: { nick: string; onOpen: () => void }) {
+  return (
+    <div
+      onClick={onOpen}
+      style={{
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        height: 44,
+        padding: '0 12px 0 5px',
+        borderRadius: 99,
+        background: 'rgba(244,241,230,.07)',
+        border: '1px solid rgba(244,241,230,.12)',
+        cursor: 'pointer',
+        flex: 'none',
+      }}
+    >
+      <div
+        style={{
+          width: 34,
+          height: 34,
+          borderRadius: 99,
+          background: lime,
+          color: '#121310',
+          font: '700 13px/34px "Space Grotesk",sans-serif',
+          textAlign: 'center',
+          flex: 'none',
+        }}
+      >
+        {nick[0]?.toUpperCase()}
+      </div>
+      <span style={{ font: '500 12px "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.85)' }}>{nick}</span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: 'none', marginLeft: 2 }}>
+        <div style={{ width: 15, height: 2, borderRadius: 1, background: 'rgba(244,241,230,.7)' }} />
+        <div style={{ width: 15, height: 2, borderRadius: 1, background: 'rgba(244,241,230,.7)' }} />
+        <div style={{ width: 15, height: 2, borderRadius: 1, background: 'rgba(244,241,230,.7)' }} />
+      </div>
+    </div>
+  )
+}
+
 type Snack = { id?: string; tekst: string; kleur: string }
 
 export function Lijst({ user }: { user: User }) {
@@ -91,7 +136,7 @@ export function Lijst({ user }: { user: User }) {
   const [nieuwFout, setNieuwFout] = useState<string>()
 
   const [menuOpen, setMenuOpen] = useState(false)
-  const [scherm, setScherm] = useState<string>()
+  const [scherm, setScherm] = useScherm()
 
   const [snack, setSnack] = useState<Snack>()
   const [snackFade, setSnackFade] = useState(false)
@@ -234,30 +279,31 @@ export function Lijst({ user }: { user: User }) {
     { label: 'Meldingen' },
   ]
 
-  if (scherm) {
-    // ponytail: every destination except lijst, Mijn profiel and Beheer is a
-    // stub, per TASK-3 scope. Real screens land in their own tasks.
-    return (
-      <main style={{ minHeight: '100vh', background: '#121310', color: paper, padding: '58px 18px 0', display: 'flex', flexDirection: 'column' }}>
-        <div
-          onClick={() => setScherm(undefined)}
-          style={{ display: 'inline-block', cursor: 'pointer', font: '500 12px "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.7)' }}
-        >
-          ← Terug
-        </div>
-        {scherm === 'Mijn profiel' ? (
-          <Profiel user={user} people={people} period={period} onTerug={() => setScherm(undefined)} />
-        ) : scherm === 'Beheer' ? (
-          <Beheer user={user} people={people} group={group} onToast={(tekst) => zegSnack(undefined, tekst, lime)} />
-        ) : (
-          <>
-            <h1 style={{ font: '400 30px/1 Anton,sans-serif', textTransform: 'uppercase', marginTop: 16 }}>{scherm}</h1>
-            <p style={{ font: '500 12px "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.5)' }}>Komt nog.</p>
-          </>
-        )}
-      </main>
-    )
-  }
+  // With the screen in the URL, #/beheer is typeable by anyone — a lid who lands
+  // there goes to the lijst, not to a blank screen.
+  const open = scherm && (scherm !== 'Beheer' || myRole === 'beheerder') ? scherm : undefined
+  const toast = (tekst: string) => zegSnack(undefined, tekst, lime)
+
+  // ponytail: every destination except lijst, Mijn profiel and Beheer is a stub,
+  // per TASK-3 scope. Real screens land in their own tasks.
+  const scherminhoud = (
+    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '58px 18px 34px', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ flex: 1 }} />
+        <MenuChip nick={myNick} onOpen={() => setMenuOpen(true)} />
+      </div>
+      {open === 'Mijn profiel' ? (
+        <Profiel user={user} people={people} period={period} onToast={toast} />
+      ) : open === 'Beheer' ? (
+        <Beheer user={user} people={people} group={group} onToast={toast} />
+      ) : (
+        <>
+          <h1 style={{ font: '400 30px/1 Anton,sans-serif', textTransform: 'uppercase', marginTop: 16 }}>{open}</h1>
+          <p style={{ font: '500 12px "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.5)' }}>Komt nog.</p>
+        </>
+      )}
+    </div>
+  )
 
   return (
     <div
@@ -269,6 +315,7 @@ export function Lijst({ user }: { user: User }) {
         flexDirection: 'column',
       }}
     >
+      {open ? scherminhoud : (
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '58px 0 34px' }}>
         <div style={{ padding: '0 18px 12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
@@ -288,43 +335,7 @@ export function Lijst({ user }: { user: User }) {
             >
               Streepkeslijst
             </h1>
-            <div
-              onClick={() => setMenuOpen(true)}
-              style={{
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                height: 44,
-                padding: '0 12px 0 5px',
-                borderRadius: 99,
-                background: 'rgba(244,241,230,.07)',
-                border: '1px solid rgba(244,241,230,.12)',
-                cursor: 'pointer',
-                flex: 'none',
-              }}
-            >
-              <div
-                style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: 99,
-                  background: lime,
-                  color: '#121310',
-                  font: '700 13px/34px "Space Grotesk",sans-serif',
-                  textAlign: 'center',
-                  flex: 'none',
-                }}
-              >
-                {myNick[0]?.toUpperCase()}
-              </div>
-              <span style={{ font: '500 12px "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.85)' }}>{myNick}</span>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: 'none', marginLeft: 2 }}>
-                <div style={{ width: 15, height: 2, borderRadius: 1, background: 'rgba(244,241,230,.7)' }} />
-                <div style={{ width: 15, height: 2, borderRadius: 1, background: 'rgba(244,241,230,.7)' }} />
-                <div style={{ width: 15, height: 2, borderRadius: 1, background: 'rgba(244,241,230,.7)' }} />
-              </div>
-            </div>
+            <MenuChip nick={myNick} onOpen={() => setMenuOpen(true)} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
             <span style={{ background: lime, color: '#121310', font: '400 11px/1 Anton,sans-serif', letterSpacing: '.06em', padding: '5px 7px', borderRadius: 3 }}>
@@ -493,6 +504,7 @@ export function Lijst({ user }: { user: User }) {
           </div>
         </div>
       </div>
+      )}
 
       {menuOpen && (
         <>
@@ -548,9 +560,9 @@ export function Lijst({ user }: { user: User }) {
                       setMenuOpen(false)
                       if (label !== 'Lijst') setScherm(label)
                     }}
-                    style={{ background: label === 'Lijst' && !scherm ? '#1B1D17' : 'transparent', padding: '15px 18px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', position: 'relative' }}
+                    style={{ background: label === open || (label === 'Lijst' && !open) ? '#1B1D17' : 'transparent', padding: '15px 18px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', position: 'relative' }}
                   >
-                    {label === 'Lijst' && <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: lime }} />}
+                    {(label === open || (label === 'Lijst' && !open)) && <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: lime }} />}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ font: '400 19px/1 Anton,sans-serif', letterSpacing: '.02em', textTransform: 'uppercase', color: paper }}>{label}</div>
                       {sub && (

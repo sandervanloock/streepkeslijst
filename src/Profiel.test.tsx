@@ -44,50 +44,50 @@ beforeEach(() => {
 afterEach(cleanup)
 
 test('AC2: het scherm toont de huidige bijnaam, naam en mail, vooraf ingevuld', () => {
-  render(<Profiel user={me} people={people} period={period} onTerug={vi.fn()} />)
+  render(<Profiel user={me} people={people} period={period} onToast={vi.fn()} />)
   expect(screen.getByDisplayValue('Sander')).toBeTruthy()
   expect(screen.getByDisplayValue('Sander V.')).toBeTruthy()
   expect(screen.getByDisplayValue('sander@x.be')).toBeTruthy()
 })
 
-test('AC3 + AC9: bewaren schrijft de nieuwe waarden weg en gaat terug naar de lijst', async () => {
-  const onTerug = vi.fn()
-  render(<Profiel user={me} people={people} period={period} onTerug={onTerug} />)
+test('AC3 + AC9: bewaren schrijft de nieuwe waarden weg en zegt dat het gelukt is', async () => {
+  const onToast = vi.fn()
+  render(<Profiel user={me} people={people} period={period} onToast={onToast} />)
 
   fireEvent.change(screen.getByDisplayValue('Sander'), { target: { value: 'Wollie' } })
   fireEvent.change(screen.getByDisplayValue('Sander V.'), { target: { value: 'Wouter L.' } })
   await act(async () => void fireEvent.click(screen.getByText('Bewaren')))
 
   expect(store.profile).toEqual({ nick: 'Wollie', naam: 'Wouter L.', mail: 'sander@x.be' })
-  expect(onTerug).toHaveBeenCalled()
+  expect(onToast).toHaveBeenCalledWith('Profiel bewaard · je staat nu als Wollie op de lijst')
 })
 
 test('AC4 + AC9: een lege bijnaam wordt geweigerd en er wordt niets bewaard', async () => {
-  const onTerug = vi.fn()
-  render(<Profiel user={me} people={people} period={period} onTerug={onTerug} />)
+  const onToast = vi.fn()
+  render(<Profiel user={me} people={people} period={period} onToast={onToast} />)
 
   fireEvent.change(screen.getByDisplayValue('Sander'), { target: { value: '  ' } })
   await act(async () => void fireEvent.click(screen.getByText('Bewaren')))
 
   expect(screen.getByText('Geef een bijnaam.')).toBeTruthy()
   expect(store.profile.nick).toBe('Sander')
-  expect(onTerug).not.toHaveBeenCalled()
+  expect(onToast).not.toHaveBeenCalled()
 })
 
 test('AC5 + AC9: een bijnaam die al bezet is door iemand anders wordt geweigerd, met naam erbij', async () => {
-  const onTerug = vi.fn()
-  render(<Profiel user={me} people={people} period={period} onTerug={onTerug} />)
+  const onToast = vi.fn()
+  render(<Profiel user={me} people={people} period={period} onToast={onToast} />)
 
   fireEvent.change(screen.getByDisplayValue('Sander'), { target: { value: 'Anton' } })
   await act(async () => void fireEvent.click(screen.getByText('Bewaren')))
 
   expect(screen.getByText('Anton is al bezet.')).toBeTruthy()
   expect(store.profile.nick).toBe('Sander')
-  expect(onTerug).not.toHaveBeenCalled()
+  expect(onToast).not.toHaveBeenCalled()
 })
 
 test('AC6: de mededeling-preview volgt wat je typt', () => {
-  render(<Profiel user={me} people={people} period={period} onTerug={vi.fn()} />)
+  render(<Profiel user={me} people={people} period={period} onToast={vi.fn()} />)
   expect(screen.getByText('Mededeling: STREEPJES P3 01/09-30/09 SANDER')).toBeTruthy()
 
   fireEvent.change(screen.getByDisplayValue('Sander'), { target: { value: 'Wollie' } })

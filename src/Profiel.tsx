@@ -12,7 +12,7 @@ const paper = '#F4F1E6'
 const lime = '#D8F651'
 const red = '#E4483A'
 
-export function Profiel({ user, people, period, onTerug }: { user: User; people: Person[]; period: Period; onTerug: () => void }) {
+export function Profiel({ user, people, period, onToast }: { user: User; people: Person[]; period: Period; onToast: (tekst: string) => void }) {
   const myRef = 'user:' + user.uid
   const profile = useProfile(user.uid)
   const huidigeNick = people.find((p) => p.personRef === myRef)?.nick ?? '?'
@@ -40,7 +40,9 @@ export function Profiel({ user, people, period, onTerug }: { user: User; people:
     }
     await saveProfile(user.uid, trimmed, naamWaarde.trim(), mailWaarde.trim())
     setFout(undefined)
-    onTerug()
+    // The menu is the only way off this screen (there is no back arrow), so the
+    // toast is the confirmation that the save landed.
+    onToast('Profiel bewaard · je staat nu als ' + trimmed + ' op de lijst')
   }
 
   return (
