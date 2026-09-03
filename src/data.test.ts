@@ -94,11 +94,18 @@ test('useProfile leest users/{uid} en volgt wijzigingen', () => {
   const { result } = renderHook(() => useProfile('u1'))
   expect(result.current).toBeUndefined()
 
-  act(() => emit!({ data: () => ({ nick: 'Wollie', name: 'Wout D.', email: 'w@x.be' }) }))
-  expect(result.current).toEqual({ nick: 'Wollie', naam: 'Wout D.', email: 'w@x.be' })
+  act(() => emit!({ data: () => ({ nick: 'Wollie', name: 'Wout D.', mail: 'w@x.be' }) }))
+  expect(result.current).toEqual({ nick: 'Wollie', naam: 'Wout D.', mail: 'w@x.be' })
 })
 
-test('saveProfile schrijft nick, naam en email naar users/{uid} zonder de rest te overschrijven', async () => {
+test('saveProfile schrijft nick, naam en mail naar users/{uid} zonder de rest te overschrijven', async () => {
   await saveProfile('u1', 'Wollie', 'Wout D.', 'w@x.be')
-  expect(calls.set).toEqual([['users/u1', { nick: 'Wollie', name: 'Wout D.', email: 'w@x.be' }]])
+  expect(calls.set).toEqual([['users/u1', { nick: 'Wollie', name: 'Wout D.', mail: 'w@x.be' }]])
+})
+
+/** The bug this field name exists to prevent: userDoc() refreshes `email` on every
+ *  login, so a payout address saved there would be silently reverted. */
+test('saveProfile raakt het email-veld van het Google-account niet aan', async () => {
+  await saveProfile('u1', 'Wollie', 'Wout D.', 'anders@x.be')
+  expect(Object.keys(calls.set[0][1] as object)).not.toContain('email')
 })

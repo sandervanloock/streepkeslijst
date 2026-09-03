@@ -7,7 +7,7 @@ import type { Person, Period } from './data'
 // Firestore stands in as an in-memory profile doc, same trick as Lijst.test.tsx:
 // saveProfile writes to `store`, useProfile reads it back through the live
 // listener that onSnapshot drives.
-const store = { profile: { nick: 'Sander', naam: 'Sander V.', email: 'sander@x.be' } }
+const store = { profile: { nick: 'Sander', naam: 'Sander V.', mail: 'sander@x.be' } }
 const listeners = new Set<() => void>()
 
 vi.mock('./data', async () => {
@@ -22,8 +22,8 @@ vi.mock('./data', async () => {
       }, [])
       return store.profile
     },
-    saveProfile: (_uid: string, nick: string, naam: string, email: string) => {
-      store.profile = { nick, naam, email }
+    saveProfile: (_uid: string, nick: string, naam: string, mail: string) => {
+      store.profile = { nick, naam, mail }
       listeners.forEach((l) => l())
       return Promise.resolve()
     },
@@ -38,7 +38,7 @@ const people: Person[] = [
 ]
 
 beforeEach(() => {
-  store.profile = { nick: 'Sander', naam: 'Sander V.', email: 'sander@x.be' }
+  store.profile = { nick: 'Sander', naam: 'Sander V.', mail: 'sander@x.be' }
 })
 
 afterEach(cleanup)
@@ -58,7 +58,7 @@ test('AC3 + AC9: bewaren schrijft de nieuwe waarden weg en gaat terug naar de li
   fireEvent.change(screen.getByDisplayValue('Sander V.'), { target: { value: 'Wouter L.' } })
   await act(async () => void fireEvent.click(screen.getByText('Bewaren')))
 
-  expect(store.profile).toEqual({ nick: 'Wollie', naam: 'Wouter L.', email: 'sander@x.be' })
+  expect(store.profile).toEqual({ nick: 'Wollie', naam: 'Wouter L.', mail: 'sander@x.be' })
   expect(onTerug).toHaveBeenCalled()
 })
 

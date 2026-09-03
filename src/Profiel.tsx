@@ -26,7 +26,7 @@ export function Profiel({ user, people, period, onTerug }: { user: User; people:
 
   const nickWaarde = nick ?? profile.nick
   const naamWaarde = naam ?? profile.naam
-  const mailWaarde = mail ?? (profile.email || user.email || '')
+  const mailWaarde = mail ?? (profile.mail || user.email || '')
 
   const bewaren = async () => {
     const trimmed = nickWaarde.trim()
