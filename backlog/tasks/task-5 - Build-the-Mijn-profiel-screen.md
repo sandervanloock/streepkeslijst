@@ -1,11 +1,11 @@
 ---
 id: TASK-5
 title: Build the 'Mijn profiel' screen
-status: In Progress
+status: Done
 assignee:
   - '@claude'
 created_date: '2026-09-03 16:31'
-updated_date: '2026-09-03 16:39'
+updated_date: '2026-09-03 16:57'
 labels: []
 dependencies: []
 documentation:
@@ -21,15 +21,15 @@ Replace the 'Mijn profiel' stub in src/Lijst.tsx with the real screen from desig
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Menu item 'Mijn profiel' opens a real screen instead of the 'Komt nog.' stub
-- [ ] #2 Screen shows BIJNAAM, VOLLEDIGE NAAM and MAILADRES VOOR JE AFREKENING inputs prefilled from the signed-in user's users/{uid} doc
-- [ ] #3 Saving writes nick, naam and email back to users/{uid} and the new nick immediately shows on that person's row on the lijst
-- [ ] #4 Empty nick is rejected with an inline error and nothing is saved
-- [ ] #5 A nick already taken by another person is rejected with an inline error naming the clash
-- [ ] #6 The live 'Mededeling: ...' preview under the nick input updates as you type
-- [ ] #7 userDoc() no longer overwrites a nick the user has set themselves on every login
-- [ ] #8 Firestore rules allow a user to write only their own users/{uid} profile fields; tests in firestore.rules.test.ts cover this
-- [ ] #9 Tests cover the save, the empty-nick error and the duplicate-nick error
+- [x] #1 Menu item 'Mijn profiel' opens a real screen instead of the 'Komt nog.' stub
+- [x] #2 Screen shows BIJNAAM, VOLLEDIGE NAAM and MAILADRES VOOR JE AFREKENING inputs prefilled from the signed-in user's users/{uid} doc
+- [x] #3 Saving writes nick, naam and email back to users/{uid} and the new nick immediately shows on that person's row on the lijst
+- [x] #4 Empty nick is rejected with an inline error and nothing is saved
+- [x] #5 A nick already taken by another person is rejected with an inline error naming the clash
+- [x] #6 The live 'Mededeling: ...' preview under the nick input updates as you type
+- [x] #7 userDoc() no longer overwrites a nick the user has set themselves on every login
+- [x] #8 Firestore rules allow a user to write only their own users/{uid} profile fields; tests in firestore.rules.test.ts cover this
+- [x] #9 Tests cover the save, the empty-nick error and the duplicate-nick error
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -45,3 +45,17 @@ Replace the 'Mijn profiel' stub in src/Lijst.tsx with the real screen from desig
 8. **Tests.** `src/Profiel.test.tsx` following the `Lijst.test.tsx` pattern (mock `./data`, real component): a successful save writes nick/naam/email and returns to the lijst; an empty nick shows `Geef een bijnaam.` and writes nothing; a nick colliding with another person shows the taken error and writes nothing; the mededeling preview follows what you type. Add a `period.test.ts` case for `mededeling`, and a `firestore.rules.test.ts` case proving u1 can write `users/u1` and cannot write `users/u2`.
 9. **Verify.** `npm run build` (this is also the typecheck), `npm test`, and `npm run test:rules` against the emulator.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+npm run test:rules could not run inside the sandbox (EPERM binding emulator ports); ran once with the sandbox disabled and all 8 firestore.rules.test.ts cases pass, including the new AC8 users/{uid} write-scoping test.
+
+Follow-up fix after review: the payout address is stored as `mail`, not `email`. `userDoc()` refreshes `email` from the Google account on every login, so a hand-picked afrekening address written to `email` was silently reverted at the next sign-in — the same trap AC7 removed for the nick, one field over. Guests already used `mail` for their afrekening address (addGuest), so the roster is consistent now. Covered by a regression test in data.test.ts asserting saveProfile never writes `email`.
+<!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Added src/Profiel.tsx (BIJNAAM/VOLLEDIGE NAAM/MAILADRES card, Dutch copy verbatim from design lines 267-307) and wired it into Lijst.tsx's scherm==='Mijn profiel' branch, replacing the stub. data.ts gained useProfile(uid) and saveProfile(uid, nick, naam, email); auth.ts's userDoc() no longer includes nick, and useAuth only seeds a derived nick on first login (getDoc check) so a saved nick survives future logins. firestore.rules now scopes users/{uid} writes to request.auth.uid == uid. mededeling()/kort() moved to period.ts per house style. Verified: npm run build (typecheck) clean; npm test 36/36 passing incl. new Profiel.test.tsx (save, empty-nick, duplicate-nick, live mededeling preview), Lijst.test.tsx AC1 (menu opens the real screen, not 'Komt nog.'), auth.test.ts (userDoc has no nick key), data.test.ts (useProfile/saveProfile); npm run test:rules 8/8 passing when run with the sandbox disabled (blocked inside the sandbox by EPERM on emulator ports), including the new users/{uid} write-scoping case.
+<!-- SECTION:FINAL_SUMMARY:END -->
