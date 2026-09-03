@@ -75,7 +75,10 @@ const UITLEG = [
   'Je hangt meteen aan de juiste groep, met de rechten die de beheerder je gaf.',
 ]
 
-export function Login() {
+/** uitnodigingsFout: AC8's "not invited" message, decided in auth.ts after the
+ *  popup has already closed — so it can't reach this component through onClick's
+ *  own .catch, and rides in as a prop from App.tsx instead. */
+export function Login({ uitnodigingsFout }: { uitnodigingsFout?: string } = {}) {
   const [error, setError] = useState<string>()
   const [bezig, setBezig] = useState(false)
   const [uitleg, setUitleg] = useState(false)
@@ -90,6 +93,8 @@ export function Login() {
       setError(e instanceof Error ? e.message : String(e))
     })
   }
+
+  const foutmelding = error ?? uitnodigingsFout
 
   return (
     <main
@@ -135,7 +140,7 @@ export function Login() {
 
       <div style={{ flex: 1, minHeight: 18 }} />
 
-      {error && (
+      {foutmelding && (
         <div
           role="alert"
           style={{
@@ -148,7 +153,7 @@ export function Login() {
           }}
         >
           <div style={{ font: '400 15px/1 Anton,sans-serif', letterSpacing: '.03em', color: red, textTransform: 'uppercase' }}>Aanmelden mislukt</div>
-          <div style={{ marginTop: 8, font: '400 12px/1.55 "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.62)' }}>{error}</div>
+          <div style={{ marginTop: 8, font: '400 12px/1.55 "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.62)' }}>{foutmelding}</div>
         </div>
       )}
 

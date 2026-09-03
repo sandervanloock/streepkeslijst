@@ -1,28 +1,53 @@
 rules_version = '2';
 
-// Real rules for the ledger data model (TASK-3). Roles beyond "signed in"
-// (drankleider, beheerder) land with their own tasks.
+// Real rules for the ledger data model (TASK-3). TASK-7 makes membership
+// explicit: any signed-in Google account used to get full access (see the
+// TASK-7 backlog notes), which is effectively open to the internet. Now
+// users/{uid} may only be created when an invites/{email} doc grants it, and
+// the ledger collections require that users/{uid} doc to already exist.
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isBeheerder() {
+    function isMember() {
       return request.auth != null
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function isBeheerder() {
+      return isMember()
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'beheerder';
     }
 
     match /users/{uid} {
-      // Everyone can read the roster; you write your own profile (TASK-5's
-      // Mijn profiel), and a beheerder writes anyone's role (TASK-6).
+      // Reading your own doc is always allowed (a fresh sign-in has to be able
+      // to see it doesn't exist yet); reading the rest of the roster needs
+      // membership. Creating your own doc needs a matching invite — this is
+      // the atomic claim in auth.ts's claimInvite, which deletes that invite
+      // doc in the same batch. A beheerder still writes anyone's role (TASK-6).
       // ponytail: "never zero beheerders" needs a count over the whole
       // collection, which rules cannot do, so it stays a client-side guard in
       // Beheer.tsx. Worst case a beheerder with devtools open demotes the last
       // one and the role is restored from the console, same as the first-time seed.
-      allow read: if request.auth != null;
-      allow write: if request.auth.uid == uid || isBeheerder();
+      allow read: if request.auth != null && (request.auth.uid == uid || isMember());
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.auth.token.email != null
+        && exists(/databases/$(database)/documents/invites/$(request.auth.token.email.lower()));
+      allow update: if request.auth.uid == uid || isBeheerder();
+      allow delete: if false;
+    }
+
+    match /invites/{email} {
+      // Only a beheerder hands invites out, reshares or revokes them (TASK-7
+      // AC9). The one exception is the invitee's own atomic claim above: they
+      // may delete the invite that names their own address, as the second half
+      // of the same writeBatch that creates their users/{uid} doc.
+      allow read, create, update: if isBeheerder();
+      allow delete: if isBeheerder()
+        || (request.auth != null && request.auth.token.email != null && request.auth.token.email.lower() == email);
     }
 
     match /meta/group {
       // Seeded on first load by useGroup (data.ts), renamed only in Beheer.
-      allow read: if request.auth != null;
+      allow read: if isMember();
       allow create: if request.auth != null;
       allow update: if isBeheerder();
       allow delete: if false;
@@ -33,24 +58,24 @@ service cloud.firestore {
       // (usePeriod in data.ts) when the doc doesn't exist yet. Afsluiten /
       // periode-beheer (another task) is the only thing allowed to change it
       // after that, and will need its own rule then.
-      allow read: if request.auth != null;
+      allow read: if isMember();
       allow create: if request.auth != null;
       allow update, delete: if false;
     }
 
     match /periods/{periodId} {
       match /guests/{guestId} {
-        allow read, create: if request.auth != null;
+        allow read, create: if isMember();
         allow update, delete: if false;
       }
 
       match /entries/{entryId} {
         // Append-only audit trail: you can only create an entry attributed to
         // yourself, never edit one, and "undo" is deleting your own entry.
-        allow read: if request.auth != null;
-        allow create: if request.auth != null && request.resource.data.by == request.auth.uid;
+        allow read: if isMember();
+        allow create: if isMember() && request.resource.data.by == request.auth.uid;
         allow update: if false;
-        allow delete: if request.auth != null && resource.data.by == request.auth.uid;
+        allow delete: if isMember() && resource.data.by == request.auth.uid;
       }
     }
   }

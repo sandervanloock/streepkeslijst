@@ -27,7 +27,7 @@ function OfflineBanner() {
 }
 
 export function App() {
-  const user = useAuth()
+  const [user, authError] = useAuth()
   const online = useOnline()
 
   if (user === undefined) return null
@@ -35,7 +35,7 @@ export function App() {
   return (
     <>
       {!online && <OfflineBanner />}
-      {user === null ? <Login /> : <Lijst user={user} />}
+      {user === null ? <Login uitnodigingsFout={authError} /> : <Lijst user={user} />}
     </>
   )
 }

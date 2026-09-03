@@ -64,6 +64,11 @@ vi.mock('./data', async () => {
     useGroup: () => ({ naam: 'Chiro Elzestraat' }),
     saveGroupName: vi.fn(() => Promise.resolve()),
     setRole: vi.fn(() => Promise.resolve()),
+    useInvites: () => [],
+    createInvite: vi.fn(() => Promise.resolve()),
+    bumpInvite: vi.fn(() => Promise.resolve()),
+    revokeInvite: vi.fn(() => Promise.resolve()),
+    shareInvite: vi.fn(() => Promise.resolve('gedeeld')),
   }
 })
 

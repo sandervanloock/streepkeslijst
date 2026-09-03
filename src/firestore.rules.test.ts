@@ -36,7 +36,19 @@ beforeAll(async () => {
   })
 })
 
-beforeEach(() => env.clearFirestore())
+// TASK-7 gates every ledger collection on the reader/writer already having a
+// users/{uid} doc (see firestore.rules), so the two regulars in these tests
+// need one seeded before each test — same as any real member, whose doc was
+// created by claimInvite (auth.ts) the first time they signed in. Tests about
+// the claim itself (a doc that does NOT exist yet) use a third, unseeded uid.
+beforeEach(async () => {
+  await env.clearFirestore()
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const db = ctx.firestore()
+    await setDoc(doc(db, 'users', 'u1'), { nick: 'Sander', role: 'lid' })
+    await setDoc(doc(db, 'users', 'u2'), { nick: 'Wollie', role: 'lid' })
+  })
+})
 afterAll(() => env.cleanup())
 
 test('AC8: wat de ene leider schrijft komt bij de andere binnen zonder refresh', async () => {
@@ -132,4 +144,46 @@ test('zonder login kom je er niet in', async () => {
 
   await assertFails(getDocs(collection(gast, 'periods/p1/entries')))
   await assertFails(addDoc(collection(gast, 'periods/p1/entries'), entry('u1')))
+})
+
+/** TASK-7: the real security change. u1/u2 are seeded as plain leden by the
+ *  global beforeEach; u3 stays unseeded on purpose, so its own users/{uid}
+ *  create is still up for grabs (the atomic claim, tested below). */
+test('AC9: alleen een beheerder maakt, herinnert of trekt een uitnodiging in', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'users', 'u1'), { nick: 'Sander', role: 'beheerder' })
+  })
+
+  await assertSucceeds(setDoc(doc(sander(), 'invites', 'nieuw@mail.be'), { email: 'nieuw@mail.be', by: 'u1', byNick: 'Sander', herinnerd: 0 }))
+  await assertSucceeds(getDocs(collection(sander(), 'invites')))
+  await assertSucceeds(updateDoc(doc(sander(), 'invites', 'nieuw@mail.be'), { herinnerd: 1 }))
+  await assertSucceeds(deleteDoc(doc(sander(), 'invites', 'nieuw@mail.be')))
+
+  // Wollie is maar een lid: geen van de drie.
+  await assertFails(setDoc(doc(wollie(), 'invites', 'ander@mail.be'), { email: 'ander@mail.be', by: 'u2', byNick: 'Wollie', herinnerd: 0 }))
+  await env.withSecurityRulesDisabled(async (ctx) =>
+    setDoc(doc(ctx.firestore(), 'invites', 'ander@mail.be'), { email: 'ander@mail.be', by: 'u1', byNick: 'Sander', herinnerd: 0 }),
+  )
+  await assertFails(updateDoc(doc(wollie(), 'invites', 'ander@mail.be'), { herinnerd: 1 }))
+  await assertFails(deleteDoc(doc(wollie(), 'invites', 'ander@mail.be')))
+})
+
+test('AC7: een uitgenodigd adres kan het eigen users/{uid} aanmaken en de eigen uitnodiging opruimen', async () => {
+  const nieuweling = env.authenticatedContext('u3', { email: 'Nieuw@Mail.be' }).firestore()
+  await env.withSecurityRulesDisabled(async (ctx) =>
+    setDoc(doc(ctx.firestore(), 'invites', 'nieuw@mail.be'), { email: 'nieuw@mail.be', by: 'u1', byNick: 'Sander', herinnerd: 0 }),
+  )
+
+  // De rule leest het adres uit het token, lowercased — precies wat claimInvite (auth.ts) doet.
+  await assertSucceeds(setDoc(doc(nieuweling, 'users', 'u3'), { nick: 'Nieuw', role: 'lid' }))
+  await assertSucceeds(deleteDoc(doc(nieuweling, 'invites', 'nieuw@mail.be')))
+})
+
+test('AC8: een niet-uitgenodigd adres krijgt geen users/{uid} en komt nergens binnen', async () => {
+  const vreemde = env.authenticatedContext('u4', { email: 'vreemde@mail.be' }).firestore()
+
+  await assertFails(setDoc(doc(vreemde, 'users', 'u4'), { nick: 'Vreemde', role: 'lid' }))
+  await assertFails(getDocs(collection(vreemde, 'invites')))
+  await assertFails(getDocs(collection(vreemde, 'periods/p1/entries')))
+  await assertFails(getDoc(doc(vreemde, 'meta', 'group')))
 })

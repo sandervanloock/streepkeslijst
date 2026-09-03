@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { euro, euroTotaal, magRolWijzigen, mededeling, totals } from './period'
+import { euro, euroTotaal, geldigeMail, magRolWijzigen, mededeling, totals } from './period'
 import type { Entry } from './period'
 
 test('groups entries per person and per kind', () => {
@@ -61,4 +61,13 @@ test('de laatste beheerder kan niet gedegradeerd worden, met twee wel', () => {
 
   // iemand beheerder maken mag altijd, ook als er nog geen enkele is
   expect(magRolWijzigen([{ id: 'u1', role: 'lid' }], 'u1', 'beheerder')).toBe(true)
+})
+
+test('AC2: geldigeMail herkent het adresformaat, niet meer dan dat', () => {
+  expect(geldigeMail('wollie@mail.be')).toBe(true)
+  expect(geldigeMail('voornaam.achternaam@chiro.be')).toBe(true)
+  expect(geldigeMail('geen-adres')).toBe(false)
+  expect(geldigeMail('geen@adres')).toBe(false)
+  expect(geldigeMail('@mail.be')).toBe(false)
+  expect(geldigeMail('  ')).toBe(false)
 })
