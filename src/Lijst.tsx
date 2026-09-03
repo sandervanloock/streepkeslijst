@@ -12,6 +12,7 @@ import {
   usePeople,
   usePeriod,
 } from './data'
+import type { Rol } from './data'
 import { euro, totals } from './period'
 import { tally } from './tally'
 import { signOut } from './auth'
@@ -25,6 +26,7 @@ const paper = '#F4F1E6'
 const lime = '#D8F651'
 const amber = '#F0A32B'
 const red = '#E4483A'
+const purple = '#7A4BD1'
 
 const HOLD_MS = 620
 
@@ -214,17 +216,21 @@ export function Lijst({ user }: { user: User }) {
   // design lines 1697-1705: every entry carries a sub line. The three that need
   // afrekeningen, inningen or meldingen have no data to read yet, so they stay
   // without one until those screens are built.
-  const nav: { label: string; sub?: string }[] = [
+  // The badge says which role a destination belongs to (design lines 556-562:
+  // slot = DRANKLEIDER, admin = BEHEERDER). Only Beheer is hidden outright —
+  // the design's enkelAdmin — the drankleider screens stay listed and badged.
+  const nav: { label: string; sub?: string; rol?: Rol }[] = [
     { label: 'Lijst', sub: people.length + ' leiders · ' + totStreep + ' streepjes' },
     {
       label: 'Afsluiten',
       sub: period.eind ? 'laatste dag ' + period.eind + ' · ' + euro(period.bakPrijs) + ' per BAK' : 'nog geen einddatum gekozen',
+      rol: 'drankleider',
     },
     // design line 1705: Beheer is enkelAdmin, everyone else never sees it.
-    ...(myRole === 'beheerder' ? [{ label: 'Beheer', sub: group.naam }] : []),
+    ...(myRole === 'beheerder' ? [{ label: 'Beheer', sub: group.naam, rol: 'beheerder' as Rol }] : []),
     { label: 'Mijn profiel', sub: 'je bijnaam op de lijst · ' + myNick },
     { label: 'Betalen' },
-    { label: 'Inningen' },
+    { label: 'Inningen', rol: 'drankleider' },
     { label: 'Meldingen' },
   ]
 
@@ -535,7 +541,7 @@ export function Lijst({ user }: { user: User }) {
 
             <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '18px 0 34px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 1, background: 'rgba(244,241,230,.08)' }}>
-                {nav.map(({ label, sub }) => (
+                {nav.map(({ label, sub, rol }) => (
                   <div
                     key={label}
                     onClick={() => {
@@ -551,6 +557,21 @@ export function Lijst({ user }: { user: User }) {
                         <div style={{ font: '400 10.5px/1.45 "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.38)', marginTop: 4 }}>{sub}</div>
                       )}
                     </div>
+                    {rol && (
+                      <div
+                        style={{
+                          flex: 'none',
+                          font: '400 9px/1 Anton,sans-serif',
+                          letterSpacing: '.1em',
+                          padding: '4px 5px',
+                          borderRadius: 2,
+                          background: rol === 'beheerder' ? purple : lime,
+                          color: rol === 'beheerder' ? paper : '#121310',
+                        }}
+                      >
+                        {rol.toUpperCase()}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

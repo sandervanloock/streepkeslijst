@@ -254,3 +254,13 @@ test('het menu zet onder elk label de sub-regel uit het ontwerp', () => {
   expect(screen.getByText('nog geen einddatum gekozen')).toBeTruthy()
   expect(screen.getByText('Chiro Elzestraat')).toBeTruthy()
 })
+
+test('het menu badget elke bestemming met de rol die ze vraagt', () => {
+  store.mijnRol = 'beheerder'
+  render(<Lijst user={me} />)
+  fireEvent.click(screen.getAllByText('Sander')[0])
+
+  expect(screen.getAllByText('DRANKLEIDER')).toHaveLength(2) // Afsluiten en Inningen
+  expect(screen.getByText('BEHEERDER')).toBeTruthy() // Beheer
+  expect(screen.queryByText('LID')).toBeNull() // wat iedereen mag krijgt geen badge
+})
