@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { euro, euroTotaal, mededeling, totals } from './period'
+import { euro, euroTotaal, magRolWijzigen, mededeling, totals } from './period'
 import type { Entry } from './period'
 
 test('groups entries per person and per kind', () => {
@@ -49,4 +49,16 @@ test('euro formatting uses a comma, not a dot', () => {
 test('AC6: mededeling matches the design format, dd/mm dates and an uppercased nick', () => {
   expect(mededeling('wollie', { nr: 3, start: '2026-09-01', eind: '2026-09-30' })).toBe('STREEPJES P3 01/09-30/09 WOLLIE')
   expect(mededeling('Sander', { nr: 1, start: '2026-01-05', eind: null })).toBe('STREEPJES P1 05/01- SANDER')
+})
+
+test('de laatste beheerder kan niet gedegradeerd worden, met twee wel', () => {
+  const alleen = [{ id: 'u1', role: 'beheerder' }, { id: 'u2', role: 'lid' }]
+  expect(magRolWijzigen(alleen, 'u1', 'lid')).toBe(false)
+  expect(magRolWijzigen(alleen, 'u1', 'drankleider')).toBe(false)
+
+  const twee = [{ id: 'u1', role: 'beheerder' }, { id: 'u2', role: 'beheerder' }]
+  expect(magRolWijzigen(twee, 'u1', 'lid')).toBe(true)
+
+  // iemand beheerder maken mag altijd, ook als er nog geen enkele is
+  expect(magRolWijzigen([{ id: 'u1', role: 'lid' }], 'u1', 'beheerder')).toBe(true)
 })

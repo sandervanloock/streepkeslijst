@@ -29,6 +29,16 @@ export function euroTotaal(t: Totals, prijs: number, bakPrijs: number): number {
 /** '€' + design's bedragRuw: toFixed(2) with a comma, design line 881-882. */
 export const euro = (v: number) => '€' + v.toFixed(2).replace('.', ',')
 
+/** The group must never be left without a beheerder, so the last one cannot be demoted.
+ *  Pure on purpose: the Beheer screen calls it before writing, and it gets a unit test. */
+export const magRolWijzigen = (
+  rollen: { id: string; role: string }[],
+  id: string,
+  nieuweRol: string,
+) =>
+  nieuweRol === 'beheerder' ||
+  rollen.some((r) => r.role === 'beheerder' && r.id !== id)
+
 /** 'dd/mm' from an ISO date, design's kort() (line 883-886). */
 export const kort = (iso: string) => iso.slice(8) + '/' + iso.slice(5, 7)
 

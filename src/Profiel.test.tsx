@@ -33,8 +33,8 @@ vi.mock('./data', async () => {
 const me = { uid: 'u1', email: 'sander@x.be' } as User
 const period: Period = { nr: 3, start: '2026-09-01', eind: '2026-09-30', open: true, perBak: 24, prijs: 1.5, bakPrijs: 30 }
 const people: Person[] = [
-  { id: 'u1', personRef: 'user:u1', nick: 'Sander', naam: 'Sander V.', isGuest: false },
-  { id: 'u2', personRef: 'user:u2', nick: 'Anton', naam: 'Anton B.', isGuest: false },
+  { id: 'u1', personRef: 'user:u1', nick: 'Sander', naam: 'Sander V.', isGuest: false, role: 'lid' },
+  { id: 'u2', personRef: 'user:u2', nick: 'Anton', naam: 'Anton B.', isGuest: false, role: 'lid' },
 ]
 
 beforeEach(() => {

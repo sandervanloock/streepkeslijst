@@ -33,7 +33,12 @@ export function useAuth() {
           const ref = doc(db, 'users', u.uid)
           getDoc(ref).then((snap) => {
             const payload: Record<string, unknown> = userDoc(u)
-            if (!snap.exists()) payload.nick = u.displayName?.split(' ')[0] ?? '?'
+            if (!snap.exists()) {
+              payload.nick = u.displayName?.split(' ')[0] ?? '?'
+              // Seeded once, for the same reason as nick: a role handed out in
+              // Beheer (TASK-6) must survive every later login.
+              payload.role = 'lid'
+            }
             setDoc(ref, payload, { merge: true })
           })
         }

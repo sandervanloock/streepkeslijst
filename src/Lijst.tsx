@@ -8,6 +8,7 @@ import {
   removeOne,
   undo,
   useEntries,
+  useGroup,
   usePeople,
   usePeriod,
 } from './data'
@@ -15,6 +16,7 @@ import { euro, totals } from './period'
 import { tally } from './tally'
 import { signOut } from './auth'
 import { Profiel } from './Profiel'
+import { Beheer } from './Beheer'
 
 // Small building blocks shared by the two bottom sheets and the side panel
 // (design lines 533-735). Ported section by section, Dutch copy verbatim.
@@ -59,10 +61,11 @@ function useKlik(geluid: boolean) {
   }
 }
 
-type Snack = { id: string; tekst: string; kleur: string }
+type Snack = { id?: string; tekst: string; kleur: string }
 
 export function Lijst({ user }: { user: User }) {
   const period = usePeriod()
+  const group = useGroup()
   const pid = period ? pidOf(period.nr) : undefined
   const people = usePeople(pid)
   const entries = useEntries(pid)
@@ -103,7 +106,7 @@ export function Lijst({ user }: { user: User }) {
   const myRef = 'user:' + user.uid
   const myNick = people.find((p) => p.personRef === myRef)?.nick ?? user.displayName?.split(' ')[0] ?? '?'
 
-  const zegSnack = (id: string, tekst: string, kleur: string) => {
+  const zegSnack = (id: string | undefined, tekst: string, kleur: string) => {
     snackTimers.current.forEach(clearTimeout)
     setSnack({ id, tekst, kleur })
     setSnackFade(false)
@@ -207,11 +210,15 @@ export function Lijst({ user }: { user: User }) {
       : 'TIK = +1 · VASTHOUDEN = BAK'
   const chipOpacity = period.open ? 1 : 0.4
 
-  const nav = ['Lijst', 'Afsluiten', 'Beheer', 'Mijn profiel', 'Betalen', 'Inningen', 'Meldingen']
+  const myRole = people.find((p) => p.personRef === myRef)?.role ?? 'lid'
+  // design line 1705: Beheer is enkelAdmin, everyone else never sees it.
+  const nav = ['Lijst', 'Afsluiten', 'Beheer', 'Mijn profiel', 'Betalen', 'Inningen', 'Meldingen'].filter(
+    (label) => label !== 'Beheer' || myRole === 'beheerder',
+  )
 
   if (scherm) {
-    // ponytail: every destination except lijst and Mijn profiel is a stub, per
-    // TASK-3 scope. Real screens (and their own state) land in their own tasks.
+    // ponytail: every destination except lijst, Mijn profiel and Beheer is a
+    // stub, per TASK-3 scope. Real screens land in their own tasks.
     return (
       <main style={{ minHeight: '100vh', background: '#121310', color: paper, padding: '58px 18px 0', display: 'flex', flexDirection: 'column' }}>
         <div
@@ -222,6 +229,8 @@ export function Lijst({ user }: { user: User }) {
         </div>
         {scherm === 'Mijn profiel' ? (
           <Profiel user={user} people={people} period={period} onTerug={() => setScherm(undefined)} />
+        ) : scherm === 'Beheer' && group ? (
+          <Beheer user={user} people={people} group={group} onToast={(tekst) => zegSnack(undefined, tekst, lime)} />
         ) : (
           <>
             <h1 style={{ font: '400 30px/1 Anton,sans-serif', textTransform: 'uppercase', marginTop: 16 }}>{scherm}</h1>
@@ -669,15 +678,18 @@ export function Lijst({ user }: { user: User }) {
           }}
         >
           <span style={{ flex: 1, font: '500 12px/1.35 "Space Grotesk",sans-serif' }}>{snack.tekst}</span>
-          <span
-            onClick={() => {
-              undo(pid, snack.id)
-              setSnack(undefined)
-            }}
-            style={{ flex: 'none', font: '700 10.5px "Space Grotesk",sans-serif', letterSpacing: '.06em', textDecoration: 'underline', cursor: 'pointer' }}
-          >
-            ONGEDAAN
-          </span>
+          {/* Only a booking can be undone; a Beheer toast has no entry behind it. */}
+          {snack.id && (
+            <span
+              onClick={() => {
+                undo(pid, snack.id!)
+                setSnack(undefined)
+              }}
+              style={{ flex: 'none', font: '700 10.5px "Space Grotesk",sans-serif', letterSpacing: '.06em', textDecoration: 'underline', cursor: 'pointer' }}
+            >
+              ONGEDAAN
+            </span>
+          )}
         </div>
       )}
 
