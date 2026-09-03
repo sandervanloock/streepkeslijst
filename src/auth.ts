@@ -5,14 +5,14 @@ import {
   signOut as fbSignOut,
   type User,
 } from 'firebase/auth'
-import { doc, serverTimestamp, setDoc } from 'firebase/firestore'
+import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore'
 import { auth, db, googleProvider } from './firebase'
 
-/** The users/{uid} payload. merge:true makes it create-on-first-login and refresh after. */
+/** The users/{uid} payload refreshed on every login. merge:true makes it create-on-first-login too.
+ *  nick is NOT here: once a user sets their own nick (TASK-5's Mijn profiel), logging in again must
+ *  not overwrite it. The derived fallback nick is seeded once, only when the doc doesn't exist yet. */
 export const userDoc = (user: Pick<User, 'displayName' | 'email' | 'photoURL'>) => ({
   name: user.displayName,
-  // nick is the Anton row name on the lijst; no profile screen yet to set it explicitly (TASK-3).
-  nick: user.displayName?.split(' ')[0] ?? '?',
   email: user.email,
   photoURL: user.photoURL,
   lastLogin: serverTimestamp(),
@@ -29,7 +29,14 @@ export function useAuth() {
     () =>
       onAuthStateChanged(auth, (u) => {
         setUser(u)
-        if (u) setDoc(doc(db, 'users', u.uid), userDoc(u), { merge: true })
+        if (u) {
+          const ref = doc(db, 'users', u.uid)
+          getDoc(ref).then((snap) => {
+            const payload: Record<string, unknown> = userDoc(u)
+            if (!snap.exists()) payload.nick = u.displayName?.split(' ')[0] ?? '?'
+            setDoc(ref, payload, { merge: true })
+          })
+        }
       }),
     [],
   )

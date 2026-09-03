@@ -21,3 +21,8 @@ test('a missing profile field stays null instead of undefined (Firestore rejects
   expect(d.email).toBeNull()
   expect(d.photoURL).toBeNull()
 })
+
+test('AC7: userDoc no longer carries a nick, so it can never overwrite one the user set themselves', () => {
+  const d = userDoc({ displayName: 'Jan Peeters', email: 'jan@example.com', photoURL: null })
+  expect(d).not.toHaveProperty('nick')
+})

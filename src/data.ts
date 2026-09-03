@@ -148,3 +148,22 @@ export const addGuest = (periodId: string, nick: string, naam: string, mail: str
     by: byUid,
     at: serverTimestamp(),
   })
+
+/** users/{uid}, live: the extra fields (email) that Person/usePeople doesn't carry (TASK-5). */
+export function useProfile(uid: string) {
+  const [profile, setProfile] = useState<{ nick: string; naam: string; email: string }>()
+
+  useEffect(
+    () =>
+      onSnapshot(doc(db, 'users', uid), (snap) => {
+        const data = snap.data()
+        setProfile({ nick: data?.nick ?? '', naam: data?.name ?? '', email: data?.email ?? '' })
+      }),
+    [uid],
+  )
+
+  return profile
+}
+
+export const saveProfile = (uid: string, nick: string, naam: string, email: string) =>
+  setDoc(doc(db, 'users', uid), { nick, name: naam, email }, { merge: true })
