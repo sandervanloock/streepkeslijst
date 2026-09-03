@@ -31,6 +31,10 @@ const purple = '#7A4BD1'
 
 const HOLD_MS = 620
 
+/** The header line: the menu chip's height and the title's cap height are the same
+ *  number on purpose, so the two read as one band instead of drifting apart. */
+const KOPHOOGTE = 44
+
 /** Design lines 958-974: a WebAudio noise burst + a vibrate, gated by the sound toggle. */
 function useKlik(geluid: boolean) {
   const acRef = useRef<AudioContext | undefined>(undefined)
@@ -75,7 +79,7 @@ function MenuChip({ nick, onOpen }: { nick: string; onOpen: () => void }) {
         display: 'flex',
         alignItems: 'center',
         gap: 8,
-        height: 44,
+        height: KOPHOOGTE,
         padding: '0 12px 0 5px',
         borderRadius: 99,
         background: 'rgba(244,241,230,.07)',
@@ -308,7 +312,7 @@ export function Lijst({ user }: { user: User }) {
               flex: 1,
               minWidth: 0,
               margin: 0,
-              font: '400 26px/1 Anton,sans-serif',
+              font: `400 ${KOPHOOGTE}px/1 Anton,sans-serif`,
               letterSpacing: '-.01em',
               color: paper,
               textTransform: 'uppercase',
@@ -351,7 +355,7 @@ export function Lijst({ user }: { user: User }) {
                 flex: 1,
                 minWidth: 0,
                 margin: 0,
-                font: "400 26px/1 Anton,sans-serif",
+                font: `400 ${KOPHOOGTE}px/1 Anton,sans-serif`,
                 letterSpacing: '-.01em',
                 color: paper,
                 textTransform: 'uppercase',
