@@ -13,11 +13,12 @@ import {
   usePeriod,
 } from './data'
 import type { Rol } from './data'
-import { euro, totals } from './period'
+import { euro, magRol, totals } from './period'
 import { tally } from './tally'
 import { signOut } from './auth'
 import { Profiel } from './Profiel'
 import { Beheer } from './Beheer'
+import { Afsluiten } from './Afsluiten'
 import { useScherm } from './route'
 
 // Small building blocks shared by the two bottom sheets and the side panel
@@ -266,22 +267,26 @@ export function Lijst({ user }: { user: User }) {
 
   const myRole = people.find((p) => p.personRef === myRef)?.role ?? 'lid'
   // Label plus, where it applies, the role the destination belongs to (design
-  // lines 556-562: slot = DRANKLEIDER, admin = BEHEERDER). Only Beheer is hidden
-  // outright — the design's enkelAdmin — the drankleider screens stay listed.
-  const nav: { label: string; rol?: Rol }[] = [
+  // lines 556-562: slot = DRANKLEIDER, admin = BEHEERDER). `alleNav` is the full
+  // set, gated by magRol below — a beheerder satisfies a drankleider-only
+  // destination too (design line 1705's enkelAdmin), a lid satisfies neither.
+  const alleNav: { label: string; rol?: Rol }[] = [
     { label: 'De lijst' },
     { label: 'Mijn profiel' },
     { label: 'Meldingen' },
     { label: 'Betalen' },
     { label: 'Inningen', rol: 'drankleider' },
     { label: 'Periode afsluiten', rol: 'drankleider' },
-    // design line 1705: Beheer is enkelAdmin, everyone else never sees it.
-    ...(myRole === 'beheerder' ? [{ label: 'Beheer', rol: 'beheerder' as Rol }] : []),
+    { label: 'Beheer', rol: 'beheerder' },
   ]
+  const nav = alleNav.filter((t) => !t.rol || magRol(myRole, t.rol))
 
-  // With the screen in the URL, #/beheer is typeable by anyone — a lid who lands
-  // there goes to the lijst, not to a blank screen.
-  const open = scherm && (scherm !== 'Beheer' || myRole === 'beheerder') ? scherm : undefined
+  // With the screen in the URL, any destination is typeable by anyone — a lid
+  // (or drankleider) who types a route above their role goes to the lijst,
+  // not to a blank screen. Checked against alleNav, not the already-filtered
+  // nav, so a hidden destination is denied rather than falling through unchecked.
+  const target = alleNav.find((t) => t.label === scherm)
+  const open = scherm && (!target?.rol || magRol(myRole, target.rol)) ? scherm : undefined
   const toast = (tekst: string) => zegSnack(undefined, tekst, lime)
 
   // ponytail: every destination except lijst, Mijn profiel and Beheer is a stub,
@@ -333,6 +338,8 @@ export function Lijst({ user }: { user: User }) {
         <Profiel user={user} people={people} period={period} onToast={toast} />
       ) : open === 'Beheer' ? (
         <Beheer user={user} people={people} group={group} onToast={toast} />
+      ) : open === 'Periode afsluiten' ? (
+        <Afsluiten user={user} period={period} entries={entries} people={people} myRole={myRole} onToast={toast} onKlaar={() => setScherm(undefined)} />
       ) : (
         <p style={{ font: '500 12px "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.5)' }}>Komt nog.</p>
       )}

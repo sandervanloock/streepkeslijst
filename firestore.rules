@@ -17,6 +17,11 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'beheerder';
     }
 
+    function isDrankleider() {
+      return isMember()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['drankleider', 'beheerder'];
+    }
+
     match /users/{uid} {
       // Reading your own doc is always allowed (a fresh sign-in has to be able
       // to see it doesn't exist yet); reading the rest of the roster needs
@@ -55,15 +60,25 @@ service cloud.firestore {
 
     match /meta/period {
       // Read-only from the client, except the one-time seed on first load
-      // (usePeriod in data.ts) when the doc doesn't exist yet. Afsluiten /
-      // periode-beheer (another task) is the only thing allowed to change it
-      // after that, and will need its own rule then.
+      // (usePeriod in data.ts). TASK-8's Afsluiten is the write behind this:
+      // a drankleider (or beheerder) closes the running period and opens the
+      // next one in the same batch as the periods/{periodId} write below.
       allow read: if isMember();
       allow create: if request.auth != null;
-      allow update, delete: if false;
+      allow update: if isDrankleider();
+      allow delete: if false;
     }
 
     match /periods/{periodId} {
+      // The archive doc Afsluiten's sluitPeriode writes: nr/start/eind/prijs/
+      // bakPrijs/perBak plus the frozen per-person totals. Rules cannot check
+      // that those totals actually match the entries ledger below — a
+      // drankleider with devtools open can write a wrong archive, same trust
+      // level as the role itself.
+      allow read: if isMember();
+      allow create, update: if isDrankleider();
+      allow delete: if false;
+
       match /guests/{guestId} {
         allow read, create: if isMember();
         allow update, delete: if false;

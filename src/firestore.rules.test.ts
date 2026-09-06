@@ -98,11 +98,32 @@ test('een gast staat vast: aanmaken en lezen mag, wijzigen en wissen niet', asyn
   await assertFails(deleteDoc(doc(sander(), 'periods/p1/guests', ref.id)))
 })
 
-test('de periode wordt eenmalig gezaaid en daarna niet meer aangepast', async () => {
+test('de periode wordt eenmalig gezaaid en kan daarna alleen door een drankleider/beheerder aangepast worden, nooit verwijderd', async () => {
   await assertSucceeds(setDoc(doc(sander(), 'meta', 'period'), { nr: 1, open: true, prijs: 1.5, bakPrijs: 30 }))
 
+  // Sander en Wollie zijn allebei nog maar een lid (globale beforeEach).
   await assertFails(updateDoc(doc(sander(), 'meta', 'period'), { prijs: 0.1 }))
   await assertFails(deleteDoc(doc(sander(), 'meta', 'period')))
+})
+
+/** TASK-8 AC8: Periode afsluiten — alleen een drankleider (of beheerder) sluit de
+ *  lopende periode af en opent de volgende, een lid mag geen van beide. */
+test('TASK-8 AC8: een drankleider sluit een periode af en opent de volgende, een lid niet', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'users', 'u1'), { nick: 'Sander', role: 'drankleider' })
+    await setDoc(doc(ctx.firestore(), 'meta', 'period'), { nr: 1, start: '2026-09-01', eind: null, open: true, perBak: 24, prijs: 1.5, bakPrijs: 30 })
+  })
+
+  await assertSucceeds(
+    setDoc(doc(sander(), 'periods', 'p1'), {
+      nr: 1, start: '2026-09-01', eind: '2026-09-30', prijs: 1.5, bakPrijs: 30, perBak: 24, totals: {}, closedBy: 'u1',
+    }),
+  )
+  await assertSucceeds(updateDoc(doc(sander(), 'meta', 'period'), { nr: 2, start: '2026-10-01', eind: null, open: true, perBak: 24, prijs: 1.5, bakPrijs: 30 }))
+
+  // Wollie is maar een lid: geen van beide.
+  await assertFails(setDoc(doc(wollie(), 'periods', 'p2'), { nr: 2, start: '2026-10-01', eind: '2026-10-31', prijs: 1.5, bakPrijs: 30, perBak: 24, totals: {}, closedBy: 'u2' }))
+  await assertFails(updateDoc(doc(wollie(), 'meta', 'period'), { nr: 3, start: '2026-11-01', eind: null, open: true, perBak: 24, prijs: 1.5, bakPrijs: 30 }))
 })
 
 test('AC8: je kan je eigen profiel schrijven, niet dat van iemand anders', async () => {

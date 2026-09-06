@@ -69,6 +69,7 @@ vi.mock('./data', async () => {
     bumpInvite: vi.fn(() => Promise.resolve()),
     revokeInvite: vi.fn(() => Promise.resolve()),
     shareInvite: vi.fn(() => Promise.resolve('gedeeld')),
+    sluitPeriode: vi.fn(() => Promise.resolve()),
   }
 })
 
@@ -292,6 +293,27 @@ test('een lid dat #/beheer intikt komt op de lijst, niet op een leeg scherm', ()
   render(<Lijst user={me} />) // Sander is een lid
 
   expect(screen.getByText('PERIODE 1 · LIVE')).toBeTruthy()
+})
+
+// TASK-8 AC1: vóór deze task was alleen Beheer echt afgeschermd — Inningen en
+// Periode afsluiten stonden voor iedereen open, ook getypt.
+test('TASK-8 AC1: een lid ziet Periode afsluiten niet in het menu en #/afsluiten stuurt naar de lijst', () => {
+  location.hash = '#/afsluiten'
+  render(<Lijst user={me} />) // Sander is een lid
+
+  expect(screen.getByText('PERIODE 1 · LIVE')).toBeTruthy()
+
+  fireEvent.click(screen.getAllByText('Sander')[0])
+  expect(screen.queryByText('Periode afsluiten')).toBeNull()
+  expect(screen.queryByText('Inningen')).toBeNull()
+})
+
+test('TASK-8 AC1: een drankleider ziet Periode afsluiten wel en opent het echte scherm', () => {
+  store.mijnRol = 'drankleider'
+  location.hash = '#/afsluiten'
+  render(<Lijst user={me} />)
+
+  expect(screen.getByText('DE LOPENDE PERIODE')).toBeTruthy()
 })
 
 test('via De lijst in het menu kom je terug op de lijst', () => {
