@@ -9,8 +9,10 @@ import {
   onSnapshot,
   serverTimestamp,
   setDoc,
+  writeBatch,
 } from 'firebase/firestore'
 import { db } from './firebase'
+import { afrekening } from './period'
 import type { Entry } from './period'
 
 export type Period = {
@@ -51,6 +53,28 @@ export function usePeriod() {
   }, [])
 
   return period
+}
+
+/** TASK-8's Afsluiten: freezes the closed period's totals (at the prices it ran at)
+ *  onto periods/{pid}, then opens period nr+1 with the new prices — one writeBatch,
+ *  so the app is never left with two open periods or with none (AC7).
+ *  ponytail: the archive is denormalised off the periods/{pid}/entries ledger, which
+ *  stays underneath as-is and can be re-summed by hand if the two ever disagree — the
+ *  alternative, a get() on the parent period doc for every single streep to lock a
+ *  closed period's entries in rules, costs a read on the app's hottest path. */
+export const sluitPeriode = (
+  period: Period,
+  entries: Entry[],
+  eind: string,
+  nieuwePrijs: number,
+  nieuweBakPrijs: number,
+  byUid: string,
+) => {
+  const { archief, volgende } = afrekening(period, entries, eind, nieuwePrijs, nieuweBakPrijs)
+  const batch = writeBatch(db)
+  batch.set(doc(db, 'periods', periodId(period.nr)), { ...archief, closedBy: byUid, closedAt: serverTimestamp() }, { merge: true })
+  batch.set(doc(db, 'meta', 'period'), volgende)
+  return batch.commit()
 }
 
 export type Rol = 'lid' | 'drankleider' | 'beheerder'
