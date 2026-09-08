@@ -170,6 +170,43 @@ test('zonder login kom je er niet in', async () => {
 /** TASK-7: the real security change. u1/u2 are seeded as plain leden by the
  *  global beforeEach; u3 stays unseeded on purpose, so its own users/{uid}
  *  create is still up for grabs (the atomic claim, tested below). */
+/** TASK-9 AC6/AC7: periods/{pid}/betalingen/{personRef} is keyed by personRef, not
+ *  uid — a lid may claim and retract their own "gemeld", never write "betaald" or
+ *  someone else's doc, a drankleider may do all of it including a guest's doc. */
+test('TASK-9 AC6: een lid meldt en herroept alleen de eigen betaling, nooit betaald of andermans doc', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) =>
+    setDoc(doc(ctx.firestore(), 'periods', 'p1'), { nr: 1, start: '2026-06-01', eind: '2026-06-30', prijs: 1.5, bakPrijs: 30, perBak: 24, totals: {} }),
+  )
+
+  await assertSucceeds(setDoc(doc(sander(), 'periods/p1/betalingen/user:u1'), { status: 'gemeld' }))
+  await assertSucceeds(deleteDoc(doc(sander(), 'periods/p1/betalingen/user:u1')))
+
+  // Zelf 'betaald' zetten mag niet — dat is de drankleider in Inningen.
+  await assertFails(setDoc(doc(sander(), 'periods/p1/betalingen/user:u1'), { status: 'betaald' }))
+  // Andermans doc, ook niet.
+  await assertFails(setDoc(doc(sander(), 'periods/p1/betalingen/user:u2'), { status: 'gemeld' }))
+  // Een gast claimt niets zelf — dat doc bestaat alleen voor de drankleider.
+  await assertFails(setDoc(doc(sander(), 'periods/p1/betalingen/guest:g1'), { status: 'gemeld' }))
+
+  // Een reeds 'betaald' gezet doc kan een lid niet meer terugzetten.
+  await env.withSecurityRulesDisabled(async (ctx) =>
+    setDoc(doc(ctx.firestore(), 'periods/p1/betalingen/user:u1'), { status: 'betaald' }),
+  )
+  await assertFails(deleteDoc(doc(sander(), 'periods/p1/betalingen/user:u1')))
+})
+
+test('TASK-9 AC6: een drankleider mag elke betaling zetten, ook betaald en die van een gast', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'users', 'u1'), { nick: 'Sander', role: 'drankleider' })
+    await setDoc(doc(ctx.firestore(), 'periods', 'p1'), { nr: 1, start: '2026-06-01', eind: '2026-06-30', prijs: 1.5, bakPrijs: 30, perBak: 24, totals: {} })
+  })
+
+  await assertSucceeds(setDoc(doc(sander(), 'periods/p1/betalingen/guest:g1'), { status: 'betaald' }))
+  await assertSucceeds(setDoc(doc(sander(), 'periods/p1/betalingen/user:u2'), { status: 'betaald' }))
+  await assertSucceeds(deleteDoc(doc(sander(), 'periods/p1/betalingen/guest:g1')))
+  await assertSucceeds(getDocs(collection(sander(), 'periods/p1/betalingen')))
+})
+
 test('AC9: alleen een beheerder maakt, herinnert of trekt een uitnodiging in', async () => {
   await env.withSecurityRulesDisabled(async (ctx) => {
     await setDoc(doc(ctx.firestore(), 'users', 'u1'), { nick: 'Sander', role: 'beheerder' })

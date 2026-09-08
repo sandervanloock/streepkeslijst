@@ -84,6 +84,23 @@ service cloud.firestore {
         allow update, delete: if false;
       }
 
+      // TASK-9's Betalen: doc id is the personRef ("user:<uid>" or "guest:<gid>"),
+      // not the uid, so a guest's payment — recorded by the drankleider in the
+      // out-of-scope Inningen — has somewhere to live too (see the plan's step 8
+      // amendment). A member's self-claim is therefore a plain string compare,
+      // never a get() or a split(): "user:" + request.auth.uid == betalingId.
+      // A guest doc (betalingId starting "guest:") never matches that compare,
+      // so it falls straight through to the isDrankleider() arm below — only a
+      // drankleider can ever set or clear a guest's status, which is correct
+      // since a guest cannot claim anything themselves.
+      match /betalingen/{betalingId} {
+        allow read: if isMember();
+        allow create, update: if isDrankleider()
+          || (betalingId == 'user:' + request.auth.uid && request.resource.data.status == 'gemeld');
+        allow delete: if isDrankleider()
+          || (betalingId == 'user:' + request.auth.uid && resource.data.status != 'betaald');
+      }
+
       match /entries/{entryId} {
         // Append-only audit trail: you can only create an entry attributed to
         // yourself, never edit one, and "undo" is deleting your own entry.

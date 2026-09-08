@@ -9,6 +9,7 @@ import { Beheer } from './Beheer'
 const calls = {
   roles: [] as [string, string][],
   names: [] as string[],
+  groupPatches: [] as Record<string, string>[],
   created: [] as string[],
   bumped: [] as string[],
   revoked: [] as string[],
@@ -22,8 +23,9 @@ vi.mock('./data', () => ({
     calls.roles.push([uid, role])
     return Promise.resolve()
   },
-  saveGroupName: (naam: string) => {
-    calls.names.push(naam)
+  saveGroup: (patch: Record<string, string>) => {
+    calls.groupPatches.push(patch)
+    if (patch.naam !== undefined) calls.names.push(patch.naam)
     return Promise.resolve()
   },
   useInvites: () => invitesLijst,
@@ -46,7 +48,7 @@ vi.mock('./data', () => ({
 }))
 
 const ik = { uid: 'u1' } as User
-const group = { naam: 'Chiro Elzestraat' }
+const group = { naam: 'Chiro Elzestraat', iban: 'BE68 5390 0754 7034', begunstigde: 'Chiro Elzestraat vzw' }
 
 const persoon = (id: string, nick: string, role: Person['role'], isGuest = false): Person => ({
   id,
@@ -72,6 +74,7 @@ const toon = (people = ploeg, onToast = vi.fn()) => {
 beforeEach(() => {
   calls.roles = []
   calls.names = []
+  calls.groupPatches = []
   calls.created = []
   calls.bumped = []
   calls.revoked = []
@@ -157,6 +160,20 @@ test('AC6: een lege groepsnaam wordt niet bewaard en krijgt de rode rand', () =>
 
   expect(calls.names).toEqual([])
   expect((veld.parentElement as HTMLElement).style.border).toContain('#E4483A')
+})
+
+test('TASK-9 AC9: het scherm toont de rekeninggegevens en bewaart een wijziging on blur', () => {
+  const onToast = toon()
+
+  expect(screen.getByDisplayValue('BE68 5390 0754 7034')).toBeTruthy()
+  expect(screen.getByDisplayValue('Chiro Elzestraat vzw')).toBeTruthy()
+
+  const rekening = screen.getByDisplayValue('BE68 5390 0754 7034')
+  fireEvent.change(rekening, { target: { value: 'BE00 0000 0000 0000' } })
+  fireEvent.blur(rekening)
+
+  expect(calls.groupPatches).toContainEqual({ iban: 'BE00 0000 0000 0000', begunstigde: 'Chiro Elzestraat vzw' })
+  expect(onToast).toHaveBeenCalledWith('Rekeninggegevens bewaard')
 })
 
 test('AC8: de laatste beheerder kan zichzelf niet degraderen', () => {

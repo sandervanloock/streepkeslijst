@@ -1,6 +1,22 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, expect, test, vi } from 'vitest'
-import { addBak, addGuest, addStreep, removeOne, saveGroupName, saveProfile, setRole, undo, useEntries, useGroup, useProfile } from './data'
+import {
+  addBak,
+  addGuest,
+  addStreep,
+  herroepBetaling,
+  meldBetaling,
+  removeOne,
+  saveGroup,
+  saveProfile,
+  setRole,
+  undo,
+  useArchief,
+  useBetaling,
+  useEntries,
+  useGroup,
+  useProfile,
+} from './data'
 
 // The Firestore SDK is mocked down to paths and payloads: what we want to know
 // is that the writers land on periods/{pid}/entries with the right delta, and
@@ -115,18 +131,62 @@ test('setRole schrijft alleen de rol, de rest van het profiel blijft staan', asy
   expect(calls.set).toEqual([['users/u2', { role: 'drankleider' }]])
 })
 
-test('de groepsnaam landt op meta/group', async () => {
-  await saveGroupName('Chiro Elzestraat')
+test('saveGroup schrijft alleen de gegeven velden naar meta/group, de rest blijft staan', async () => {
+  await saveGroup({ naam: 'Chiro Elzestraat' })
   expect(calls.set).toEqual([['meta/group', { naam: 'Chiro Elzestraat' }]])
+})
+
+test('TASK-9: saveGroup schrijft ook de rekeninggegevens', async () => {
+  await saveGroup({ iban: 'BE68 5390 0754 7034', begunstigde: 'Chiro Elzestraat vzw' })
+  expect(calls.set).toEqual([['meta/group', { iban: 'BE68 5390 0754 7034', begunstigde: 'Chiro Elzestraat vzw' }]])
 })
 
 /** The bug this guards: Beheer used to be hidden behind `group` being loaded, so a
  *  missing doc or a denied read (a rules change not yet deployed) silently showed
  *  the stub instead of the screen. A group name is cosmetic, so it falls back. */
-test('useGroup geeft meteen de standaardnaam, ook voor de eerste snapshot', () => {
+test('useGroup geeft meteen de standaardwaarden, ook voor de eerste snapshot', () => {
   const { result } = renderHook(() => useGroup())
-  expect(result.current).toEqual({ naam: 'Chiro Elzestraat' })
+  expect(result.current).toEqual({ naam: 'Chiro Elzestraat', iban: '', begunstigde: '' })
 
   act(() => emit!({ data: () => ({ naam: 'Chiro Elzestraat Zuid' }) }))
-  expect(result.current).toEqual({ naam: 'Chiro Elzestraat Zuid' })
+  // een doc zonder iban/begunstigde (elke groep van vóór TASK-9) valt terug op de lege standaard
+  expect(result.current).toEqual({ naam: 'Chiro Elzestraat Zuid', iban: '', begunstigde: '' })
+
+  act(() => emit!({ data: () => ({ naam: 'Chiro Elzestraat Zuid', iban: 'BE68 5390 0754 7034', begunstigde: 'Chiro Elzestraat vzw' }) }))
+  expect(result.current).toEqual({ naam: 'Chiro Elzestraat Zuid', iban: 'BE68 5390 0754 7034', begunstigde: 'Chiro Elzestraat vzw' })
+})
+
+test('TASK-9: useArchief leest periods en sorteert nieuwste eerst, zonder query of index', () => {
+  const { result } = renderHook(() => useArchief())
+
+  act(() =>
+    emit!({
+      docs: [
+        { id: 'p2', data: () => ({ nr: 2, start: '2026-08-01', eind: '2026-08-31', prijs: 1.5, bakPrijs: 30, perBak: 24, totals: {} }) },
+        { id: 'p1', data: () => ({ nr: 1, start: '2026-07-01', eind: '2026-07-31', prijs: 1.5, bakPrijs: 30, perBak: 24, totals: {} }) },
+        { id: 'p3', data: () => ({ nr: 3, start: '2026-09-01', eind: '2026-09-30', prijs: 1.5, bakPrijs: 30, perBak: 24, totals: {} }) },
+      ],
+    }),
+  )
+
+  expect(result.current.map((a) => a.id)).toEqual(['p3', 'p2', 'p1'])
+})
+
+test('TASK-9: useBetaling is open zonder doc, en volgt gemeld/betaald zoals ze binnenkomen', () => {
+  const { result } = renderHook(() => useBetaling('p3', 'user:u1'))
+  expect(result.current).toBe('open')
+
+  act(() => emit!({ data: () => ({ status: 'gemeld' }) }))
+  expect(result.current).toBe('gemeld')
+
+  act(() => emit!({ data: () => ({ status: 'betaald' }) }))
+  expect(result.current).toBe('betaald')
+})
+
+test('TASK-9: melden en herroepen schrijven/verwijderen periods/{pid}/betalingen/{personRef}', async () => {
+  await meldBetaling('p3', 'user:u1')
+  expect(calls.set).toEqual([['periods/p3/betalingen/user:u1', { status: 'gemeld', at: 'TS' }]])
+
+  await herroepBetaling('p3', 'guest:g1')
+  expect(calls.deleted).toEqual(['periods/p3/betalingen/guest:g1'])
 })

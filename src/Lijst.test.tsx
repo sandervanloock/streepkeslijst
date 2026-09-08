@@ -61,8 +61,8 @@ vi.mock('./data', async () => {
     },
     useProfile: () => ({ nick: 'Sander', naam: 'Sander V.', mail: 'sander@x.be' }),
     saveProfile: vi.fn(() => Promise.resolve()),
-    useGroup: () => ({ naam: 'Chiro Elzestraat' }),
-    saveGroupName: vi.fn(() => Promise.resolve()),
+    useGroup: () => ({ naam: 'Chiro Elzestraat', iban: 'BE68 5390 0754 7034', begunstigde: 'Chiro Elzestraat vzw' }),
+    saveGroup: vi.fn(() => Promise.resolve()),
     setRole: vi.fn(() => Promise.resolve()),
     useInvites: () => [],
     createInvite: vi.fn(() => Promise.resolve()),
@@ -70,6 +70,12 @@ vi.mock('./data', async () => {
     revokeInvite: vi.fn(() => Promise.resolve()),
     shareInvite: vi.fn(() => Promise.resolve('gedeeld')),
     sluitPeriode: vi.fn(() => Promise.resolve()),
+    // Betalen (TASK-9): no closed period yet in these lijst-level tests, so it
+    // renders its own "niets openstaand" fallback — Betalen.test.tsx covers the rest.
+    useArchief: () => [],
+    useBetaling: () => 'open',
+    meldBetaling: vi.fn(() => Promise.resolve()),
+    herroepBetaling: vi.fn(() => Promise.resolve()),
   }
 })
 
@@ -285,7 +291,7 @@ test('het menu blijft op elk scherm bereikbaar, er is geen terugpijl', () => {
   // het chipje staat er nog, dus je kan van hier naar elk ander scherm
   fireEvent.click(screen.getAllByText('Sander')[0])
   fireEvent.click(screen.getByText('Betalen'))
-  expect(screen.getByText('Komt nog.')).toBeTruthy()
+  expect(screen.getByText('Nog geen periode afgesloten.')).toBeTruthy() // echt scherm, geen stub meer (TASK-9)
 })
 
 test('een lid dat #/beheer intikt komt op de lijst, niet op een leeg scherm', () => {

@@ -77,11 +77,68 @@ export const sluitPeriode = (
   return batch.commit()
 }
 
+export type Archief = {
+  nr: number
+  start: string
+  eind: string
+  prijs: number
+  bakPrijs: number
+  perBak: number
+  totals: Record<string, { streep: number; bak: number }>
+}
+
+/** periods/{pid}: sluitPeriode's frozen totals per closed period (TASK-8), read-only
+ *  from here on out — Betalen's own amount and history come from this collection,
+ *  never from meta/period. No where, no index: this collection contains exactly
+ *  the closed periods, a handful a year (see the plan on TASK-9). */
+export function useArchief() {
+  const [archieven, setArchieven] = useState<(Archief & { id: string })[]>([])
+
+  useEffect(
+    () =>
+      onSnapshot(collection(db, 'periods'), (snap) =>
+        setArchieven(
+          snap.docs
+            .map((d) => ({ id: d.id, ...(d.data() as Archief) }))
+            .sort((a, b) => b.nr - a.nr),
+        ),
+      ),
+    [],
+  )
+
+  return archieven
+}
+
+export type BetalingStatus = 'open' | 'gemeld' | 'betaald'
+
+/** periods/{pid}/betalingen/{personRef} (TASK-9's amendment): keyed by personRef,
+ *  not uid, so a guest's payment is recordable too (by the drankleider, in the
+ *  out-of-scope Inningen) — a member can only ever claim their own. No doc = open. */
+export function useBetaling(pid: string, personRef: string) {
+  const [status, setStatus] = useState<BetalingStatus>('open')
+
+  useEffect(
+    () =>
+      onSnapshot(doc(db, 'periods', pid, 'betalingen', personRef), (snap) =>
+        setStatus((snap.data()?.status as BetalingStatus | undefined) ?? 'open'),
+      ),
+    [pid, personRef],
+  )
+
+  return status
+}
+
+export const meldBetaling = (pid: string, personRef: string) =>
+  setDoc(doc(db, 'periods', pid, 'betalingen', personRef), { status: 'gemeld', at: serverTimestamp() })
+
+export const herroepBetaling = (pid: string, personRef: string) =>
+  deleteDoc(doc(db, 'periods', pid, 'betalingen', personRef))
+
 export type Rol = 'lid' | 'drankleider' | 'beheerder'
 
-export type Group = { naam: string }
+export type Group = { naam: string; iban: string; begunstigde: string }
 
-const defaultGroup: Group = { naam: 'Chiro Elzestraat' }
+const defaultGroup: Group = { naam: 'Chiro Elzestraat', iban: '', begunstigde: '' }
 
 /** meta/group, seeded once and then just read, like usePeriod above — except this
  *  one never returns undefined. A period must be loaded before anything renders
@@ -98,15 +155,17 @@ export function useGroup() {
     })
     return onSnapshot(ref, (snap) => {
       const data = snap.data()
-      if (data) setGroup(data as Group)
+      // Spread over the default so an iban/begunstigde-less doc (every group
+      // before TASK-9) still comes out with the empty strings Beheer/Betalen expect.
+      if (data) setGroup({ ...defaultGroup, ...(data as Partial<Group>) })
     })
   }, [])
 
   return group
 }
 
-export const saveGroupName = (naam: string) =>
-  setDoc(doc(db, 'meta', 'group'), { naam }, { merge: true })
+export const saveGroup = (patch: Partial<Group>) =>
+  setDoc(doc(db, 'meta', 'group'), patch, { merge: true })
 
 export const setRole = (uid: string, role: Rol) =>
   setDoc(doc(db, 'users', uid), { role }, { merge: true })

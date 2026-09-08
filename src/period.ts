@@ -28,6 +28,11 @@ export function euroTotaal(t: Totals, prijs: number, bakPrijs: number): number {
   return sum
 }
 
+/** One person's amount — euroTotaal's per-person twin, for Betalen (TASK-9).
+ *  Always called with the frozen archive's own prijs/bakPrijs, never the live period's. */
+export const bedrag = (t: { streep: number; bak: number }, prijs: number, bakPrijs: number) =>
+  t.streep * prijs + t.bak * bakPrijs
+
 /** '€' + design's bedragRuw: toFixed(2) with a comma, design line 881-882. */
 export const euro = (v: number) => '€' + v.toFixed(2).replace('.', ',')
 
