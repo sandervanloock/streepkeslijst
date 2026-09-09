@@ -1,20 +1,24 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { User } from 'firebase/auth'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
-import type { Group, Person } from './data'
+import type { Group, Period, Person } from './data'
 import { Betalen } from './Betalen'
 
 // Same idiom as Lijst.test.tsx: a tiny in-memory store standing in for
 // Firestore, so melden/herroepen through the real writer names re-renders the
-// real hook, exactly what onSnapshot does in the app.
+// real hook, exactly what onSnapshot does in the app. TASK-10: amounts come
+// from useOwnEntries (a per-period, per-person entry ledger), not a frozen
+// totals field, so the mock keeps a ledger per period id instead.
 const store: Record<string, 'gemeld' | 'betaald'> = {}
 const listeners = new Set<() => void>()
 const calls = { meld: [] as [string, string][], herroep: [] as [string, string][] }
+type Entry = { personRef: string; kind: 'streep' | 'bak'; delta: number }
+let ledger: Record<string, Entry[]> = {}
 
 vi.mock('./data', async () => {
   const { useEffect, useState } = await import('react')
   return {
-    useArchief: () => archieven,
+    useOwnEntries: (pid: string, personRef: string) => (ledger[pid] ?? []).filter((e) => e.personRef === personRef),
     useBetaling: (pid: string, personRef: string) => {
       const [, set] = useState(0)
       useEffect(() => {
@@ -46,10 +50,10 @@ const people: Person[] = [
   { id: 'u2', personRef: 'user:u2', nick: 'Anton', naam: 'Anton B.', isGuest: false, role: 'lid' },
 ]
 
-let archieven: { id: string; nr: number; start: string; eind: string; prijs: number; bakPrijs: number; perBak: number; totals: Record<string, { streep: number; bak: number }> }[] = []
+let periodes: (Period & { id: string })[] = []
 
 const toon = (onToast = vi.fn()) => {
-  render(<Betalen user={ik} people={people} group={group} onToast={onToast} />)
+  render(<Betalen user={ik} people={people} periodes={periodes} group={group} onToast={onToast} />)
   return onToast
 }
 
@@ -57,16 +61,26 @@ beforeEach(() => {
   for (const k of Object.keys(store)) delete store[k]
   calls.meld = []
   calls.herroep = []
-  archieven = [
-    { id: 'p3', nr: 3, start: '2026-08-01', eind: '2026-08-31', prijs: 1.5, bakPrijs: 30, perBak: 24, totals: { 'user:u1': { streep: 10, bak: 0 } } },
-    { id: 'p2', nr: 2, start: '2026-07-01', eind: '2026-07-31', prijs: 1.4, bakPrijs: 28, perBak: 24, totals: { 'user:u1': { streep: 5, bak: 0 } } },
-    { id: 'p1', nr: 1, start: '2026-06-01', eind: '2026-06-30', prijs: 1.3, bakPrijs: 26, perBak: 24, totals: { 'user:u1': { streep: 8, bak: 1 } } },
+  // "vandaag" in Betalen.tsx is the real clock, so every fixture below is
+  // closed with an eind well in the past (AC6: a payable period's eind < today).
+  periodes = [
+    { id: 'p3', nr: 3, start: '2026-08-01', eind: '2026-08-31', startAt: null, eindAt: null, prijs: 1.5, bakPrijs: 30, perBak: 24 } as unknown as Period & { id: string },
+    { id: 'p2', nr: 2, start: '2026-07-01', eind: '2026-07-31', startAt: null, eindAt: null, prijs: 1.4, bakPrijs: 28, perBak: 24 } as unknown as Period & { id: string },
+    { id: 'p1', nr: 1, start: '2026-06-01', eind: '2026-06-30', startAt: null, eindAt: null, prijs: 1.3, bakPrijs: 26, perBak: 24 } as unknown as Period & { id: string },
   ]
+  ledger = {
+    p3: [{ personRef: 'user:u1', kind: 'streep', delta: 10 }],
+    p2: [{ personRef: 'user:u1', kind: 'streep', delta: 5 }],
+    p1: [
+      { personRef: 'user:u1', kind: 'streep', delta: 8 },
+      { personRef: 'user:u1', kind: 'bak', delta: 1 },
+    ],
+  }
 })
 
 afterEach(cleanup)
 
-test('AC1: toont het eigen bedrag, de periode en het streepjesaantal uit het meest recente archief, aan de bevroren prijs', () => {
+test('AC1: toont het eigen bedrag, de periode en het streepjesaantal uit de meest recente afgelopen periode', () => {
   toon()
 
   expect(screen.getByText('PERIODE 3 · 2026-08-01 → 2026-08-31')).toBeTruthy()
@@ -126,11 +140,20 @@ test('AC4: een leider zonder openstaande betaling ziet de Niets openstaand-kaart
 })
 
 test('zonder ooit een afgesloten periode toont het scherm ook Niets openstaand, geen leeg scherm', () => {
-  archieven = []
+  periodes = []
   toon()
 
   expect(screen.getByText('Niets openstaand')).toBeTruthy()
   expect(screen.getByText('Nog geen periode afgesloten.')).toBeTruthy()
+})
+
+test('TASK-10 AC6: een periode afgesloten met een einddatum in de toekomst biedt nog niets aan om te betalen', () => {
+  periodes = periodes.map((p) => (p.id === 'p3' ? { ...p, eind: '2099-01-01' } : p))
+  toon()
+
+  // p3 valt weg (nog niet voorbij), p2 wordt de nieuwste betaalbare periode.
+  expect(screen.queryByText(/PERIODE 3/)).toBeNull()
+  expect(screen.getByText('PERIODE 2 · 2026-07-01 → 2026-07-31')).toBeTruthy()
 })
 
 test('AC5: eerdere periodes staan in de lijst met reikwijdte, streepjes, bedrag en status', () => {

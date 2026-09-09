@@ -32,7 +32,10 @@ vi.mock('./data', async () => {
   }
   return {
     periodId: (nr: number) => 'p' + nr,
-    usePeriod: () => ({ nr: 1, start: '2026-09-01', eind: null, open: true, perBak: 24, prijs: 1.5, bakPrijs: 30 }),
+    // TASK-10: one always-active period doc, "today" comfortably inside its
+    // range — the lijst-level tests aren't about actievePeriode's boundaries
+    // (period.test.ts covers those), just that the active period renders.
+    usePeriodes: () => [{ id: 'p1', nr: 1, start: '2020-01-01', eind: null, perBak: 24, prijs: 1.5, bakPrijs: 30 }],
     usePeople: () => {
       live()
       return [
@@ -72,7 +75,7 @@ vi.mock('./data', async () => {
     sluitPeriode: vi.fn(() => Promise.resolve()),
     // Betalen (TASK-9): no closed period yet in these lijst-level tests, so it
     // renders its own "niets openstaand" fallback — Betalen.test.tsx covers the rest.
-    useArchief: () => [],
+    useOwnEntries: () => [],
     useBetaling: () => 'open',
     meldBetaling: vi.fn(() => Promise.resolve()),
     herroepBetaling: vi.fn(() => Promise.resolve()),
