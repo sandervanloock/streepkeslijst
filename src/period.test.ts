@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { afrekening, dagNa, euro, euroTotaal, geldigeMail, magRol, magRolWijzigen, mededeling, totals } from './period'
+import { afrekening, bedrag, dagNa, euro, euroTotaal, geldigeMail, magRol, magRolWijzigen, mededeling, totals } from './period'
 import type { Entry } from './period'
 
 test('groups entries per person and per kind', () => {
@@ -44,6 +44,17 @@ test('euro formatting uses a comma, not a dot', () => {
   expect(euro(1.5)).toBe('€1,50')
   expect(euro(31.5)).toBe('€31,50')
   expect(euro(0)).toBe('€0,00')
+})
+
+test('TASK-9 AC1: bedrag is the per-person twin of euroTotaal, at the given prices', () => {
+  expect(bedrag({ streep: 4, bak: 1 }, 1.5, 30)).toBe(4 * 1.5 + 30)
+  expect(bedrag({ streep: 0, bak: 0 }, 1.5, 30)).toBe(0)
+})
+
+test('TASK-9 AC1: bedrag uses whatever prices it is given — the frozen archive prices, never live ones', () => {
+  // Same totals, old (frozen) vs new (live) prices — the caller decides which one, bedrag itself has no opinion.
+  expect(bedrag({ streep: 10, bak: 0 }, 1.5, 30)).toBe(15)
+  expect(bedrag({ streep: 10, bak: 0 }, 2, 36)).toBe(20)
 })
 
 test('AC6: mededeling matches the design format, dd/mm dates and an uppercased nick', () => {

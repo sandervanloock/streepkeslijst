@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { User } from 'firebase/auth'
-import { bumpInvite, createInvite, revokeInvite, saveGroupName, setRole, shareInvite, useInvites } from './data'
+import { bumpInvite, createInvite, revokeInvite, saveGroup, setRole, shareInvite, useInvites } from './data'
 import type { Group, Invite, Person, Rol } from './data'
 import { geldigeMail, kort, magRolWijzigen } from './period'
 
@@ -13,6 +13,10 @@ import { geldigeMail, kort, magRolWijzigen } from './period'
 // badge GEMAILD -> UITGENODIGD, 'Opnieuw mailen' -> 'Opnieuw delen'. The
 // heading and the BEHEERDER badge belong to the shared header row in
 // Lijst.tsx, which keeps them on the menu chip's line on every screen.
+// TASK-9 adds a REKENING block under DE GROEP: the design has state for
+// iban/begunstigde (lines 1447-1451) but no markup binding it anywhere, so
+// this block is modeled on the existing group-name field, same bordered-input
+// + onBlur-saves pattern, not ported verbatim from a markup block that doesn't exist.
 const paper = '#F4F1E6'
 const lime = '#D8F651'
 const red = '#E4483A'
@@ -43,6 +47,8 @@ export function Beheer({
   const ik = leden.find((p) => p.id === user.uid)
 
   const [naam, setNaam] = useState<string>()
+  const [iban, setIban] = useState<string>()
+  const [begunstigde, setBegunstigde] = useState<string>()
   const [fout, setFout] = useState<string>()
   const invites = useInvites()
   const [uitContact, setUitContact] = useState('')
@@ -52,12 +58,19 @@ export function Beheer({
   if (ik?.role !== 'beheerder') return null
 
   const naamWaarde = naam ?? group.naam
+  const ibanWaarde = iban ?? group.iban
+  const begunstigdeWaarde = begunstigde ?? group.begunstigde
 
   const bewaarNaam = () => {
     const trimmed = naamWaarde.trim()
     if (!trimmed) return
-    saveGroupName(trimmed)
+    saveGroup({ naam: trimmed })
     onToast('Groep heet nu ' + trimmed)
+  }
+
+  const bewaarRekening = () => {
+    saveGroup({ iban: ibanWaarde.trim(), begunstigde: begunstigdeWaarde.trim() })
+    onToast('Rekeninggegevens bewaard')
   }
 
   const stuurUitnodiging = async () => {
@@ -122,6 +135,33 @@ export function Beheer({
           placeholder="bv. Chiro Elzestraat"
           style={{ width: '100%', marginTop: 5, background: 'transparent', border: 'none', outline: 'none', color: paper, font: '400 22px/1.15 Anton,sans-serif', textTransform: 'uppercase' }}
         />
+      </div>
+
+      <div style={{ ...kopje, padding: '20px 0 6px' }}>REKENING</div>
+      <div style={{ borderRadius: 12, background: '#1B1D17', border: '1px solid rgba(244,241,230,.12)', padding: 16 }}>
+        <div style={{ font: '400 11.5px/1.55 "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.6)', marginBottom: 12 }}>
+          Waar iedereen naartoe overschrijft. Elk lid ziet dit onder Betalen, alleen een beheerder wijzigt het hier.
+        </div>
+        <div style={{ background: 'rgba(244,241,230,.06)', border: '1px solid rgba(244,241,230,.12)', borderRadius: 10, padding: '11px 13px' }}>
+          <div style={veldKopje}>REKENINGNUMMER</div>
+          <input
+            value={ibanWaarde}
+            onChange={(e) => setIban(e.target.value)}
+            onBlur={bewaarRekening}
+            placeholder="BE68 5390 0754 7034"
+            style={{ width: '100%', marginTop: 5, background: 'transparent', border: 'none', outline: 'none', color: paper, font: '500 17px "Space Grotesk",sans-serif' }}
+          />
+        </div>
+        <div style={{ background: 'rgba(244,241,230,.06)', border: '1px solid rgba(244,241,230,.12)', borderRadius: 10, padding: '11px 13px', marginTop: 8 }}>
+          <div style={veldKopje}>BEGUNSTIGDE</div>
+          <input
+            value={begunstigdeWaarde}
+            onChange={(e) => setBegunstigde(e.target.value)}
+            onBlur={bewaarRekening}
+            placeholder="bv. Chiro Elzestraat vzw"
+            style={{ width: '100%', marginTop: 5, background: 'transparent', border: 'none', outline: 'none', color: paper, font: '500 15px "Space Grotesk",sans-serif' }}
+          />
+        </div>
       </div>
 
       <div style={{ ...kopje, padding: '20px 0 6px' }}>VOLK ERBIJ HALEN</div>
