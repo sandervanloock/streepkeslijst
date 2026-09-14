@@ -18,6 +18,7 @@ import {
   getDocs,
   onSnapshot,
   setDoc,
+  Timestamp,
   updateDoc,
 } from 'firebase/firestore'
 import { readFileSync } from 'node:fs'
@@ -28,6 +29,13 @@ let env: RulesTestEnvironment
 const sander = () => env.authenticatedContext('u1').firestore()
 const wollie = () => env.authenticatedContext('u2').firestore()
 const entry = (by: string, personRef = 'user:u2', kind = 'streep', delta = 1) => ({ personRef, kind, delta, by, byNick: by })
+
+// TASK-10: binnenPeriode() compares against the real clock (request.time), so
+// these fixtures are anchored well in the past/well-open, not to the app's
+// own fictional "today" — START predates any test run, EIND is a period that
+// really has closed by the time these tests execute.
+const START = Timestamp.fromDate(new Date('2020-01-01T00:00:00Z'))
+const EIND = Timestamp.fromDate(new Date('2026-05-31T00:00:00Z'))
 
 beforeAll(async () => {
   env = await initializeTestEnvironment({
@@ -47,6 +55,10 @@ beforeEach(async () => {
     const db = ctx.firestore()
     await setDoc(doc(db, 'users', 'u1'), { nick: 'Sander', role: 'lid' })
     await setDoc(doc(db, 'users', 'u2'), { nick: 'Wollie', role: 'lid' })
+    // TASK-10: periods/p1/entries' rules now do a get() on periods/p1 for
+    // binnenPeriode(), so any test that books an entry there needs an active
+    // period doc to exist — an open period, started well in the past.
+    await setDoc(doc(db, 'periods', 'p1'), { nr: 1, start: '2020-01-01', eind: null, startAt: START, eindAt: null, perBak: 24, prijs: 1.5, bakPrijs: 30 })
   })
 })
 afterAll(() => env.cleanup())
@@ -98,32 +110,74 @@ test('een gast staat vast: aanmaken en lezen mag, wijzigen en wissen niet', asyn
   await assertFails(deleteDoc(doc(sander(), 'periods/p1/guests', ref.id)))
 })
 
-test('de periode wordt eenmalig gezaaid en kan daarna alleen door een drankleider/beheerder aangepast worden, nooit verwijderd', async () => {
-  await assertSucceeds(setDoc(doc(sander(), 'meta', 'period'), { nr: 1, open: true, prijs: 1.5, bakPrijs: 30 }))
+test('een periode kan alleen door een drankleider/beheerder aangepast worden, nooit verwijderd', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) =>
+    setDoc(doc(ctx.firestore(), 'periods', 'p1'), {
+      nr: 1, start: '2026-09-01', eind: null, startAt: START, eindAt: null, perBak: 24, prijs: 1.5, bakPrijs: 30,
+    }),
+  )
 
   // Sander en Wollie zijn allebei nog maar een lid (globale beforeEach).
-  await assertFails(updateDoc(doc(sander(), 'meta', 'period'), { prijs: 0.1 }))
-  await assertFails(deleteDoc(doc(sander(), 'meta', 'period')))
+  await assertFails(updateDoc(doc(sander(), 'periods', 'p1'), { prijs: 0.1 }))
+  await assertFails(deleteDoc(doc(sander(), 'periods', 'p1')))
 })
 
-/** TASK-8 AC8: Periode afsluiten — alleen een drankleider (of beheerder) sluit de
- *  lopende periode af en opent de volgende, een lid mag geen van beide. */
-test('TASK-8 AC8: een drankleider sluit een periode af en opent de volgende, een lid niet', async () => {
+/** TASK-10 (was TASK-8 AC8): Periode afsluiten — alleen een drankleider (of
+ *  beheerder) sluit de lopende periode af en opent de volgende, een lid mag
+ *  geen van beide. periods/{pid} vervangt meta/period volledig (TASK-10). */
+test('TASK-10: een drankleider sluit een periode af en opent de volgende, een lid niet', async () => {
   await env.withSecurityRulesDisabled(async (ctx) => {
     await setDoc(doc(ctx.firestore(), 'users', 'u1'), { nick: 'Sander', role: 'drankleider' })
-    await setDoc(doc(ctx.firestore(), 'meta', 'period'), { nr: 1, start: '2026-09-01', eind: null, open: true, perBak: 24, prijs: 1.5, bakPrijs: 30 })
+    await setDoc(doc(ctx.firestore(), 'periods', 'p1'), {
+      nr: 1, start: '2026-09-01', eind: null, startAt: START, eindAt: null, perBak: 24, prijs: 1.5, bakPrijs: 30,
+    })
   })
 
   await assertSucceeds(
-    setDoc(doc(sander(), 'periods', 'p1'), {
-      nr: 1, start: '2026-09-01', eind: '2026-09-30', prijs: 1.5, bakPrijs: 30, perBak: 24, totals: {}, closedBy: 'u1',
+    updateDoc(doc(sander(), 'periods', 'p1'), { eind: '2026-09-30', eindAt: EIND, closedBy: 'u1' }),
+  )
+  await assertSucceeds(
+    setDoc(doc(sander(), 'periods', 'p2'), {
+      nr: 2, start: '2026-10-01', eind: null, startAt: EIND, eindAt: null, perBak: 24, prijs: 1.5, bakPrijs: 30,
     }),
   )
-  await assertSucceeds(updateDoc(doc(sander(), 'meta', 'period'), { nr: 2, start: '2026-10-01', eind: null, open: true, perBak: 24, prijs: 1.5, bakPrijs: 30 }))
 
   // Wollie is maar een lid: geen van beide.
-  await assertFails(setDoc(doc(wollie(), 'periods', 'p2'), { nr: 2, start: '2026-10-01', eind: '2026-10-31', prijs: 1.5, bakPrijs: 30, perBak: 24, totals: {}, closedBy: 'u2' }))
-  await assertFails(updateDoc(doc(wollie(), 'meta', 'period'), { nr: 3, start: '2026-11-01', eind: null, open: true, perBak: 24, prijs: 1.5, bakPrijs: 30 }))
+  await assertFails(updateDoc(doc(wollie(), 'periods', 'p1'), { eind: '2026-09-30' }))
+  await assertFails(
+    setDoc(doc(wollie(), 'periods', 'p3'), {
+      nr: 3, start: '2026-11-01', eind: null, startAt: EIND, eindAt: null, perBak: 24, prijs: 1.5, bakPrijs: 30,
+    }),
+  )
+})
+
+/** TASK-10 AC4: strepen en schrappen werken alleen binnen de actieve periode —
+ *  wat de bevroren totals vroeger beschermde (een oude boeking wissen om een
+ *  afgerekende rekening te verkleinen) zit nu hier. */
+test('TASK-10 AC4: een lid mag strepen binnen de actieve periode, niet in een periode wiens eindAt al voorbij is', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const db = ctx.firestore()
+    await setDoc(doc(db, 'periods', 'actief'), { nr: 2, start: '2026-06-01', eind: null, startAt: START, eindAt: null, perBak: 24, prijs: 1.5, bakPrijs: 30 })
+    await setDoc(doc(db, 'periods', 'gesloten'), {
+      nr: 1, start: '2026-05-01', eind: '2026-05-31', startAt: START, eindAt: EIND, perBak: 24, prijs: 1.5, bakPrijs: 30,
+    })
+  })
+
+  await assertSucceeds(addDoc(collection(sander(), 'periods/actief/entries'), entry('u1')))
+  await assertFails(addDoc(collection(sander(), 'periods/gesloten/entries'), entry('u1')))
+})
+
+test('TASK-10 AC4: schrappen (verwijderen van je eigen boeking) kan ook niet meer nadat de periode voorbij is', async () => {
+  let ref: { id: string }
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const db = ctx.firestore()
+    await setDoc(doc(db, 'periods', 'nu-nog-actief'), { nr: 1, start: '2026-06-01', eind: null, startAt: START, eindAt: null, perBak: 24, prijs: 1.5, bakPrijs: 30 })
+    ref = await addDoc(collection(db, 'periods/nu-nog-actief/entries'), entry('u1'))
+    // De periode sluit ná de boeking, met een einddatum die al voorbij is.
+    await setDoc(doc(db, 'periods', 'nu-nog-actief'), { eind: '2026-06-30', eindAt: EIND }, { merge: true })
+  })
+
+  await assertFails(deleteDoc(doc(sander(), 'periods/nu-nog-actief/entries', ref!.id)))
 })
 
 test('AC8: je kan je eigen profiel schrijven, niet dat van iemand anders', async () => {

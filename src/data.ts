@@ -5,108 +5,106 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  getDocs,
   increment,
   onSnapshot,
+  query,
   serverTimestamp,
   setDoc,
+  Timestamp,
+  where,
   writeBatch,
 } from 'firebase/firestore'
 import { db } from './firebase'
-import { afrekening } from './period'
+import { dagNa } from './period'
 import type { Entry } from './period'
 
+// TASK-10: a period doc carries its own range — start/eind next to startAt/
+// eindAt (rules need a timestamp compare, see firestore.rules's binnenPeriode).
+// meta/period is gone: which period is active is derived from today's date
+// (period.ts's actievePeriode), never read off a stored flag or 'open' bit.
 export type Period = {
   nr: number
   start: string
   eind: string | null
-  open: boolean
+  startAt: Timestamp
+  eindAt: Timestamp | null
   perBak: number
   prijs: number
   bakPrijs: number
 }
 
-const defaultPeriod: Period = {
-  nr: 1,
-  start: new Date().toISOString().slice(0, 10),
-  eind: null,
-  open: true,
-  perBak: 24,
-  prijs: 1.5,
-  bakPrijs: 30,
-}
-
 export const periodId = (nr: number) => 'p' + nr
 
-/** meta/period is the seam for the not-yet-built afsluiten/beheer screens: seed it once, then just read it. */
-export function usePeriod() {
-  const [period, setPeriod] = useState<Period>()
+const naarTimestamp = (iso: string) => Timestamp.fromDate(new Date(iso + 'T00:00:00Z'))
+
+/** periods/{pid}: one collection, one source of truth, the running period
+ *  included — replaces both the old usePeriod (meta/period) and TASK-9's
+ *  useArchief, one onSnapshot on the whole collection, the same single listen
+ *  the app already paid for. First-load seed: an empty collection writes
+ *  periods/p1, same seam usePeriod used to be. */
+export function usePeriodes() {
+  const [periodes, setPeriodes] = useState<(Period & { id: string })[]>([])
 
   useEffect(() => {
-    const ref = doc(db, 'meta', 'period')
-    getDoc(ref).then((snap) => {
-      if (!snap.exists()) setDoc(ref, defaultPeriod)
+    const col = collection(db, 'periods')
+    getDocs(col).then((snap) => {
+      if (snap.empty) {
+        const start = new Date().toISOString().slice(0, 10)
+        setDoc(doc(db, 'periods', periodId(1)), {
+          nr: 1,
+          start,
+          eind: null,
+          startAt: naarTimestamp(start),
+          eindAt: null,
+          perBak: 24,
+          prijs: 1.5,
+          bakPrijs: 30,
+        })
+      }
     })
-    return onSnapshot(ref, (snap) => {
-      const data = snap.data()
-      if (data) setPeriod(data as Period)
-    })
+    return onSnapshot(col, (snap) =>
+      setPeriodes(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Period) })).sort((a, b) => a.nr - b.nr)),
+    )
   }, [])
 
-  return period
+  return periodes
 }
 
-/** TASK-8's Afsluiten: freezes the closed period's totals (at the prices it ran at)
- *  onto periods/{pid}, then opens period nr+1 with the new prices — one writeBatch,
- *  so the app is never left with two open periods or with none (AC7).
- *  ponytail: the archive is denormalised off the periods/{pid}/entries ledger, which
- *  stays underneath as-is and can be re-summed by hand if the two ever disagree — the
- *  alternative, a get() on the parent period doc for every single streep to lock a
- *  closed period's entries in rules, costs a read on the app's hottest path. */
+/** Afsluiten's confirm (TASK-10): one writeBatch that sets eind/eindAt on the
+ *  closing period and creates period nr+1 with start = dagNa(eind), so ranges
+ *  stay contiguous and the app is never left with two open periods or with
+ *  none (AC3/AC7). No totals get frozen here anymore — amounts are derived
+ *  from that period's own entries at that period's own prices (src/Betalen.tsx's
+ *  useOwnEntries), which is why this no longer takes the entries ledger. What
+ *  the old freeze protected against — a member deleting an old entry to
+ *  shrink a settled bill — is now firestore.rules's binnenPeriode() check:
+ *  an entry may only be written or deleted while its period is the active one. */
 export const sluitPeriode = (
   period: Period,
-  entries: Entry[],
   eind: string,
   nieuwePrijs: number,
   nieuweBakPrijs: number,
   byUid: string,
 ) => {
-  const { archief, volgende } = afrekening(period, entries, eind, nieuwePrijs, nieuweBakPrijs)
+  const start = dagNa(eind)
   const batch = writeBatch(db)
-  batch.set(doc(db, 'periods', periodId(period.nr)), { ...archief, closedBy: byUid, closedAt: serverTimestamp() }, { merge: true })
-  batch.set(doc(db, 'meta', 'period'), volgende)
-  return batch.commit()
-}
-
-export type Archief = {
-  nr: number
-  start: string
-  eind: string
-  prijs: number
-  bakPrijs: number
-  perBak: number
-  totals: Record<string, { streep: number; bak: number }>
-}
-
-/** periods/{pid}: sluitPeriode's frozen totals per closed period (TASK-8), read-only
- *  from here on out — Betalen's own amount and history come from this collection,
- *  never from meta/period. No where, no index: this collection contains exactly
- *  the closed periods, a handful a year (see the plan on TASK-9). */
-export function useArchief() {
-  const [archieven, setArchieven] = useState<(Archief & { id: string })[]>([])
-
-  useEffect(
-    () =>
-      onSnapshot(collection(db, 'periods'), (snap) =>
-        setArchieven(
-          snap.docs
-            .map((d) => ({ id: d.id, ...(d.data() as Archief) }))
-            .sort((a, b) => b.nr - a.nr),
-        ),
-      ),
-    [],
+  batch.set(
+    doc(db, 'periods', periodId(period.nr)),
+    { eind, eindAt: naarTimestamp(eind), closedBy: byUid, closedAt: serverTimestamp() },
+    { merge: true },
   )
-
-  return archieven
+  batch.set(doc(db, 'periods', periodId(period.nr + 1)), {
+    nr: period.nr + 1,
+    start,
+    startAt: naarTimestamp(start),
+    eind: null,
+    eindAt: null,
+    perBak: period.perBak,
+    prijs: nieuwePrijs,
+    bakPrijs: nieuweBakPrijs,
+  })
+  return batch.commit()
 }
 
 export type BetalingStatus = 'open' | 'gemeld' | 'betaald'
@@ -140,7 +138,7 @@ export type Group = { naam: string; iban: string; begunstigde: string }
 
 const defaultGroup: Group = { naam: 'Chiro Elzestraat', iban: '', begunstigde: '' }
 
-/** meta/group, seeded once and then just read, like usePeriod above — except this
+/** meta/group, seeded once and then just read, like usePeriodes above — except this
  *  one never returns undefined. A period must be loaded before anything renders
  *  (its prices are real money), but a group name is cosmetic: falling back to the
  *  default beats hiding the whole Beheer screen when the doc is missing or the
@@ -223,6 +221,24 @@ export function useEntries(periodId: string | undefined) {
       setEntries(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Entry) }))),
     )
   }, [periodId])
+
+  return entries
+}
+
+/** One person's own entries within one period — Betalen's derived amounts
+ *  (TASK-10 AC5), read through `where`, which Firestore covers with the
+ *  automatic single-field index (no composite index, no rules change), and a
+ *  smaller read than the whole period's ledger. */
+export function useOwnEntries(periodId: string | undefined, personRef: string) {
+  const [entries, setEntries] = useState<(Entry & { id: string })[]>([])
+
+  useEffect(() => {
+    if (!periodId) return
+    return onSnapshot(
+      query(collection(db, 'periods', periodId, 'entries'), where('personRef', '==', personRef)),
+      (snap) => setEntries(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Entry) }))),
+    )
+  }, [periodId, personRef])
 
   return entries
 }

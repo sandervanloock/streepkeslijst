@@ -58,26 +58,34 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    match /meta/period {
-      // Read-only from the client, except the one-time seed on first load
-      // (usePeriod in data.ts). TASK-8's Afsluiten is the write behind this:
-      // a drankleider (or beheerder) closes the running period and opens the
-      // next one in the same batch as the periods/{periodId} write below.
-      allow read: if isMember();
-      allow create: if request.auth != null;
-      allow update: if isDrankleider();
-      allow delete: if false;
-    }
-
     match /periods/{periodId} {
-      // The archive doc Afsluiten's sluitPeriode writes: nr/start/eind/prijs/
-      // bakPrijs/perBak plus the frozen per-person totals. Rules cannot check
-      // that those totals actually match the entries ledger below — a
-      // drankleider with devtools open can write a wrong archive, same trust
-      // level as the role itself.
+      // TASK-10: one collection, one source of truth — the running period
+      // lives here too (meta/period is gone), carrying its own start/eind
+      // next to startAt/eindAt (Timestamps, for the binnenPeriode() compare
+      // below). Rules cannot check that a period's range is contiguous with
+      // its neighbours — a drankleider with devtools open can write a bad
+      // range, same trust level as the role itself. Read-only from the
+      // client; only a drankleider/beheerder writes it, via Afsluiten's
+      // sluitPeriode. ponytail: a genuinely empty periods collection (a
+      // brand-new install) needs periods/p1 seeded by hand as part of
+      // standing the group up, the same one-off console step the very first
+      // beheerder already needs — nobody without a role passes isDrankleider() either.
       allow read: if isMember();
       allow create, update: if isDrankleider();
       allow delete: if false;
+
+      // TASK-10 AC4: an entry may only be created or deleted while its
+      // period is the active one — what the old frozen-totals archive used
+      // to protect against (an old entry deleted to shrink a settled bill),
+      // now enforced here instead. One get() per streep: reversed on purpose
+      // from TASK-8's plan, which refused it as too expensive on the hottest
+      // path — at this app's scale (one Chiro group, a few hundred entries a
+      // period) a stale amount is a money bug, an extra read is a rounding error.
+      function binnenPeriode() {
+        let p = get(/databases/$(database)/documents/periods/$(periodId)).data;
+        return request.time >= p.startAt
+          && (p.eindAt == null || request.time < p.eindAt + duration.value(1, 'd'));
+      }
 
       match /guests/{guestId} {
         allow read, create: if isMember();
@@ -104,10 +112,12 @@ service cloud.firestore {
       match /entries/{entryId} {
         // Append-only audit trail: you can only create an entry attributed to
         // yourself, never edit one, and "undo" is deleting your own entry.
+        // TASK-10 AC4: create and delete additionally require binnenPeriode() —
+        // strepen and schrappen only work on the period that is active today.
         allow read: if isMember();
-        allow create: if isMember() && request.resource.data.by == request.auth.uid;
+        allow create: if isMember() && request.resource.data.by == request.auth.uid && binnenPeriode();
         allow update: if false;
-        allow delete: if isMember() && resource.data.by == request.auth.uid;
+        allow delete: if isMember() && resource.data.by == request.auth.uid && binnenPeriode();
       }
     }
   }

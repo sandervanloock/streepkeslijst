@@ -1,5 +1,6 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { User } from 'firebase/auth'
+import { Timestamp } from 'firebase/firestore'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { Profiel } from './Profiel'
 import type { Person, Period } from './data'
@@ -31,7 +32,16 @@ vi.mock('./data', async () => {
 })
 
 const me = { uid: 'u1', email: 'sander@x.be' } as User
-const period: Period = { nr: 3, start: '2026-09-01', eind: '2026-09-30', open: true, perBak: 24, prijs: 1.5, bakPrijs: 30 }
+const period: Period = {
+  nr: 3,
+  start: '2026-09-01',
+  eind: '2026-09-30',
+  startAt: Timestamp.fromDate(new Date('2026-09-01T00:00:00Z')),
+  eindAt: Timestamp.fromDate(new Date('2026-09-30T00:00:00Z')),
+  perBak: 24,
+  prijs: 1.5,
+  bakPrijs: 30,
+}
 const people: Person[] = [
   { id: 'u1', personRef: 'user:u1', nick: 'Sander', naam: 'Sander V.', isGuest: false, role: 'lid' },
   { id: 'u2', personRef: 'user:u2', nick: 'Anton', naam: 'Anton B.', isGuest: false, role: 'lid' },

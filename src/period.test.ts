@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { afrekening, bedrag, dagNa, euro, euroTotaal, geldigeMail, magRol, magRolWijzigen, mededeling, totals } from './period'
+import { actievePeriode, bedrag, dagNa, euro, euroTotaal, geldigeMail, magRol, magRolWijzigen, mededeling, totals } from './period'
 import type { Entry } from './period'
 
 test('groups entries per person and per kind', () => {
@@ -98,35 +98,30 @@ test('TASK-8: dagNa schuift een dag op, ook over een maand- en jaargrens', () =>
   expect(dagNa('2026-12-31')).toBe('2027-01-01')
 })
 
-test('TASK-8 AC5/AC6: afrekening bevriest de oude prijzen op het archief en zet de nieuwe alleen op de volgende periode', () => {
-  const period = { nr: 3, start: '2026-08-01', prijs: 1.5, bakPrijs: 30, perBak: 24 }
-  const entries: Entry[] = [
-    { personRef: 'user:a', kind: 'streep', delta: 4 },
-    { personRef: 'user:a', kind: 'bak', delta: 1 },
-    { personRef: 'user:b', kind: 'streep', delta: 2 },
+// TASK-10: which period is active is derived from today's date rather than a
+// stored flag. Tested at the three boundaries AC8 names — the start day, the
+// end day, and the day after — plus the regression this task exists for: a
+// closed-with-future-eind pair must not move "today" out of the current period.
+test('TASK-10 AC2/AC8: actievePeriode kiest de periode wiens bereik vandaag bevat, op de grenzen', () => {
+  const periodes = [
+    { start: '2026-08-01', eind: '2026-08-31' },
+    { start: '2026-09-01', eind: null },
   ]
 
-  const { archief, volgende } = afrekening(period, entries, '2026-08-31', 2, 36)
+  expect(actievePeriode(periodes, '2026-08-01')).toBe(periodes[0]) // de startdag
+  expect(actievePeriode(periodes, '2026-08-31')).toBe(periodes[0]) // de einddag zelf, nog erbij
+  expect(actievePeriode(periodes, '2026-09-01')).toBe(periodes[1]) // de dag erna: de nieuwe periode
+})
 
-  expect(archief).toEqual({
-    nr: 3,
-    start: '2026-08-01',
-    eind: '2026-08-31',
-    prijs: 1.5, // de prijs waaraan de periode liep, niet de nieuwe
-    bakPrijs: 30,
-    perBak: 24,
-    totals: {
-      'user:a': { streep: 4, bak: 1 },
-      'user:b': { streep: 2, bak: 0 },
-    },
-  })
-  expect(volgende).toEqual({
-    nr: 4,
-    start: '2026-09-01', // de dag na het gekozen einde
-    eind: null,
-    open: true,
-    perBak: 24,
-    prijs: 2, // de nieuwe prijzen gelden pas vanaf de volgende periode
-    bakPrijs: 36,
-  })
+test('TASK-10 AC1: een periode afgesloten met een einddatum in de toekomst blijft actief tot en met die dag', () => {
+  const periodes = [
+    { start: '2026-08-01', eind: '2026-09-30' }, // gesloten, maar het laatste dagje ligt nog voor de boeg
+    { start: '2026-10-01', eind: null },
+  ]
+
+  // De bug die dit oplost: sluiten met een toekomstige einddatum mag "vandaag"
+  // niet meteen naar de volgende periode duwen.
+  expect(actievePeriode(periodes, '2026-09-09')).toBe(periodes[0])
+  expect(actievePeriode(periodes, '2026-09-30')).toBe(periodes[0])
+  expect(actievePeriode(periodes, '2026-10-01')).toBe(periodes[1])
 })

@@ -10,25 +10,40 @@ import {
   saveGroup,
   saveProfile,
   setRole,
+  sluitPeriode,
   undo,
-  useArchief,
   useBetaling,
   useEntries,
   useGroup,
+  useOwnEntries,
+  usePeriodes,
   useProfile,
 } from './data'
+import type { Period } from './data'
 
 // The Firestore SDK is mocked down to paths and payloads: what we want to know
 // is that the writers land on periods/{pid}/entries with the right delta, and
 // that useEntries re-renders on an incoming snapshot (someone else's write).
-const calls = { added: [] as [string, Record<string, unknown>][], deleted: [] as string[], set: [] as [string, Record<string, unknown>][] }
+const calls = {
+  added: [] as [string, Record<string, unknown>][],
+  deleted: [] as string[],
+  set: [] as [string, Record<string, unknown>][],
+  batchSet: [] as [string, Record<string, unknown>, Record<string, unknown> | undefined][],
+}
 let emit: ((snap: unknown) => void) | undefined
+let queryFilter: { field: string; value: unknown } | undefined
+let getDocsResult: { empty: boolean } = { empty: true }
 
 vi.mock('./firebase', () => ({ db: {} }))
 
 vi.mock('firebase/firestore', () => ({
   collection: (_db: unknown, ...path: string[]) => path.join('/'),
   doc: (_db: unknown, ...path: string[]) => path.join('/'),
+  query: (path: string, whereClause: { field: string; value: unknown }) => {
+    queryFilter = whereClause
+    return path
+  },
+  where: (field: string, _op: string, value: unknown) => ({ field, value }),
   addDoc: (path: string, data: Record<string, unknown>) => {
     calls.added.push([path, data])
     return Promise.resolve({ id: 'nieuw' })
@@ -38,6 +53,7 @@ vi.mock('firebase/firestore', () => ({
     return Promise.resolve()
   },
   getDoc: () => Promise.resolve({ exists: () => true }),
+  getDocs: () => Promise.resolve(getDocsResult),
   setDoc: (path: string, data: Record<string, unknown>) => {
     calls.set.push([path, data])
     return Promise.resolve()
@@ -49,13 +65,26 @@ vi.mock('firebase/firestore', () => ({
     }
   },
   serverTimestamp: () => 'TS',
+  writeBatch: () => ({
+    set: (path: string, data: Record<string, unknown>, opts?: Record<string, unknown>) => {
+      calls.batchSet.push([path, data, opts])
+    },
+    commit: () => {
+      calls.set.push(...calls.batchSet.map(([p, d]) => [p, d] as [string, Record<string, unknown>]))
+      return Promise.resolve()
+    },
+  }),
+  Timestamp: { fromDate: (d: Date) => 'TS:' + d.toISOString().slice(0, 10) },
 }))
 
 beforeEach(() => {
   calls.added = []
   calls.deleted = []
   calls.set = []
+  calls.batchSet = []
   emit = undefined
+  queryFilter = undefined
+  getDocsResult = { empty: true }
 })
 
 test('useEntries leest de periode-boekingen en volgt wat anderen erbij schrijven', () => {
@@ -156,20 +185,70 @@ test('useGroup geeft meteen de standaardwaarden, ook voor de eerste snapshot', (
   expect(result.current).toEqual({ naam: 'Chiro Elzestraat Zuid', iban: 'BE68 5390 0754 7034', begunstigde: 'Chiro Elzestraat vzw' })
 })
 
-test('TASK-9: useArchief leest periods en sorteert nieuwste eerst, zonder query of index', () => {
-  const { result } = renderHook(() => useArchief())
+test('TASK-10: usePeriodes leest de hele periods-collectie, gesorteerd op nr', () => {
+  getDocsResult = { empty: false } // niet leeg, dus geen zaai-schrijf
+  const { result } = renderHook(() => usePeriodes())
 
   act(() =>
     emit!({
       docs: [
-        { id: 'p2', data: () => ({ nr: 2, start: '2026-08-01', eind: '2026-08-31', prijs: 1.5, bakPrijs: 30, perBak: 24, totals: {} }) },
-        { id: 'p1', data: () => ({ nr: 1, start: '2026-07-01', eind: '2026-07-31', prijs: 1.5, bakPrijs: 30, perBak: 24, totals: {} }) },
-        { id: 'p3', data: () => ({ nr: 3, start: '2026-09-01', eind: '2026-09-30', prijs: 1.5, bakPrijs: 30, perBak: 24, totals: {} }) },
+        { id: 'p2', data: () => ({ nr: 2, start: '2026-08-01', eind: '2026-08-31', perBak: 24, prijs: 1.5, bakPrijs: 30 }) },
+        { id: 'p1', data: () => ({ nr: 1, start: '2026-07-01', eind: '2026-07-31', perBak: 24, prijs: 1.5, bakPrijs: 30 }) },
+        { id: 'p3', data: () => ({ nr: 3, start: '2026-09-01', eind: null, perBak: 24, prijs: 1.5, bakPrijs: 30 }) },
       ],
     }),
   )
 
-  expect(result.current.map((a) => a.id)).toEqual(['p3', 'p2', 'p1'])
+  expect(result.current.map((p) => p.id)).toEqual(['p1', 'p2', 'p3'])
+})
+
+test('TASK-10: usePeriodes zaait periods/p1 als de collectie leeg is', async () => {
+  getDocsResult = { empty: true }
+  renderHook(() => usePeriodes())
+  await Promise.resolve()
+  await Promise.resolve()
+
+  expect(calls.set).toHaveLength(1)
+  const [path, data] = calls.set[0]
+  expect(path).toBe('periods/p1')
+  expect(data).toMatchObject({ nr: 1, eind: null, eindAt: null, perBak: 24, prijs: 1.5, bakPrijs: 30 })
+})
+
+test('TASK-10 AC5: useOwnEntries filtert de periode-boekingen op personRef', () => {
+  const { result } = renderHook(() => useOwnEntries('p3', 'user:u1'))
+  expect(queryFilter).toEqual({ field: 'personRef', value: 'user:u1' })
+
+  act(() =>
+    emit!({
+      docs: [{ id: 'e1', data: () => ({ personRef: 'user:u1', kind: 'streep', delta: 3 }) }],
+    }),
+  )
+  expect(result.current).toEqual([{ id: 'e1', personRef: 'user:u1', kind: 'streep', delta: 3 }])
+})
+
+test('TASK-10 AC3: sluitPeriode schrijft in één batch de einddatum op de sluitende periode en de nieuwe periode erna, zonder totals', async () => {
+  const period: Period = {
+    nr: 3,
+    start: '2026-08-01',
+    eind: null,
+    startAt: 'TS:2026-08-01' as unknown as Period['startAt'],
+    eindAt: null,
+    perBak: 24,
+    prijs: 1.5,
+    bakPrijs: 30,
+  }
+
+  await sluitPeriode(period, '2026-08-31', 2, 36, 'u1')
+
+  expect(calls.set).toEqual([
+    ['periods/p3', { eind: '2026-08-31', eindAt: 'TS:2026-08-31', closedBy: 'u1', closedAt: 'TS' }],
+    [
+      'periods/p4',
+      { nr: 4, start: '2026-09-01', startAt: 'TS:2026-09-01', eind: null, eindAt: null, perBak: 24, prijs: 2, bakPrijs: 36 },
+    ],
+  ])
+  expect(Object.keys(calls.set[0][1])).not.toContain('totals')
+  expect(Object.keys(calls.set[1][1])).not.toContain('totals')
 })
 
 test('TASK-9: useBetaling is open zonder doc, en volgt gemeld/betaald zoals ze binnenkomen', () => {

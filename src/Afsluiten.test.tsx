@@ -1,5 +1,6 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { User } from 'firebase/auth'
+import { Timestamp } from 'firebase/firestore'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import type { Entry } from './period'
 import type { Person } from './data'
@@ -15,7 +16,16 @@ vi.mock('./data', () => ({
 }))
 
 const ik = { uid: 'u1' } as User
-const period = { nr: 3, start: '2026-09-01', eind: null, open: true, perBak: 24, prijs: 1.5, bakPrijs: 30 }
+const period = {
+  nr: 3,
+  start: '2026-09-01',
+  eind: null,
+  startAt: Timestamp.fromDate(new Date('2026-09-01T00:00:00Z')),
+  eindAt: null,
+  perBak: 24,
+  prijs: 1.5,
+  bakPrijs: 30,
+}
 const entries: Entry[] = [
   { personRef: 'user:a', kind: 'streep', delta: 4 },
   { personRef: 'user:a', kind: 'bak', delta: 1 },
@@ -94,7 +104,7 @@ test('AC5/AC6: bevestigen sluit de periode af met de gekozen einddatum en prijze
 
   await act(async () => void fireEvent.click(screen.getByText('Afsluiten en nieuwe starten')))
 
-  expect(calls.sluit).toEqual([[period, entries, '2026-09-30', 1.5, 30, 'u1']])
+  expect(calls.sluit).toEqual([[period, '2026-09-30', 1.5, 30, 'u1']])
   expect(onToast).toHaveBeenCalledWith('Periode 3 afgesloten · iedereen ziet zijn bedrag onder Betalen')
   expect(onKlaar).toHaveBeenCalled()
 })

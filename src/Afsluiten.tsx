@@ -82,7 +82,7 @@ export function Afsluiten({
       setStap((s) => (s + 1) as 2 | 3)
       return
     }
-    await sluitPeriode(period, entries, eind, prijs, bakPrijs, user.uid)
+    await sluitPeriode(period, eind, prijs, bakPrijs, user.uid)
     onToast(`Periode ${period.nr} afgesloten · iedereen ziet zijn bedrag onder Betalen`)
     onKlaar()
   }

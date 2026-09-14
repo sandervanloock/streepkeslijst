@@ -10,10 +10,10 @@ import {
   useEntries,
   useGroup,
   usePeople,
-  usePeriod,
+  usePeriodes,
 } from './data'
 import type { Rol } from './data'
-import { euro, magRol, totals } from './period'
+import { actievePeriode, euro, magRol, totals } from './period'
 import { tally } from './tally'
 import { signOut } from './auth'
 import { Profiel } from './Profiel'
@@ -120,7 +120,9 @@ function MenuChip({ nick, onOpen }: { nick: string; onOpen: () => void }) {
 type Snack = { id?: string; tekst: string; kleur: string }
 
 export function Lijst({ user }: { user: User }) {
-  const period = usePeriod()
+  const periodes = usePeriodes()
+  const vandaag = new Date().toISOString().slice(0, 10)
+  const period = actievePeriode(periodes, vandaag)
   const group = useGroup()
   const pid = period ? pidOf(period.nr) : undefined
   const people = usePeople(pid)
@@ -177,7 +179,6 @@ export function Lijst({ user }: { user: User }) {
   const nick = (personRef: string) => people.find((p) => p.personRef === personRef)?.nick ?? '?'
 
   const onStreep = async (personRef: string) => {
-    if (!period.open) return
     klik('streep')
     const ref = await addStreep(pid, personRef, user.uid, myNick)
     zegSnack(ref.id, `+1 voor ${nick(personRef)} · ${personRef === myRef ? 'op je eigen naam' : nick(personRef) + ' krijgt een melding'}`, lime)
@@ -198,7 +199,6 @@ export function Lijst({ user }: { user: User }) {
   }
 
   const onHoldDown = (personRef: string) => {
-    if (!period.open) return
     holdRef.current = personRef
     setHoldingId(personRef)
     clearTimeout(holdTimer.current)
@@ -259,12 +259,9 @@ export function Lijst({ user }: { user: User }) {
   const totBak = [...tot.values()].reduce((a, v) => a + v.bak, 0)
   const totEuro = [...tot.values()].reduce((a, v) => a + v.streep * period.prijs + v.bak * period.bakPrijs, 0)
 
-  const hintTekst = !period.open
-    ? 'AFGESLOTEN · STREPEN KAN NIET MEER'
-    : correctie
-      ? 'TIK = –1 · VASTHOUDEN = – BAK'
-      : 'TIK = +1 · VASTHOUDEN = BAK'
-  const chipOpacity = period.open ? 1 : 0.4
+  // TASK-10: the lijst always shows the active period by definition (it is
+  // derived from today's date), so there is no more AFGESLOTEN state to hint at.
+  const hintTekst = correctie ? 'TIK = –1 · VASTHOUDEN = – BAK' : 'TIK = +1 · VASTHOUDEN = BAK'
 
   const myRole = people.find((p) => p.personRef === myRef)?.role ?? 'lid'
   // Label plus, where it applies, the role the destination belongs to (design
@@ -342,7 +339,7 @@ export function Lijst({ user }: { user: User }) {
       ) : open === 'Periode afsluiten' ? (
         <Afsluiten user={user} period={period} entries={entries} people={people} myRole={myRole} onToast={toast} onKlaar={() => setScherm(undefined)} />
       ) : open === 'Betalen' ? (
-        <Betalen user={user} people={people} group={group} onToast={toast} />
+        <Betalen user={user} people={people} periodes={periodes} group={group} onToast={toast} />
       ) : (
         <p style={{ font: '500 12px "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.5)' }}>Komt nog.</p>
       )}
@@ -422,7 +419,6 @@ export function Lijst({ user }: { user: User }) {
               borderRadius: 99,
               cursor: 'pointer',
               flex: 'none',
-              opacity: chipOpacity,
             }}
           >
             {geluid ? 'geluid aan' : 'geluid uit'}
@@ -438,7 +434,6 @@ export function Lijst({ user }: { user: User }) {
               border: `1px solid ${correctie ? red : 'rgba(244,241,230,.16)'}`,
               background: correctie ? red : 'transparent',
               color: correctie ? '#fff' : 'rgba(244,241,230,.55)',
-              opacity: chipOpacity,
             }}
           >
             {correctie ? 'klaar' : 'corrigeren'}
