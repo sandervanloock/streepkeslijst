@@ -20,6 +20,7 @@ import { Profiel } from './Profiel'
 import { Beheer } from './Beheer'
 import { Afsluiten } from './Afsluiten'
 import { Betalen } from './Betalen'
+import { Inningen } from './Inningen'
 import { useScherm } from './route'
 
 // Small building blocks shared by the two bottom sheets and the side panel
@@ -287,8 +288,6 @@ export function Lijst({ user }: { user: User }) {
   const open = scherm && (!target?.rol || magRol(myRole, target.rol)) ? scherm : undefined
   const toast = (tekst: string) => zegSnack(undefined, tekst, lime)
 
-  // ponytail: Inningen is still a stub (its own task); every other destination
-  // is now a real screen.
   // The title sits on the chip's row, the same way the lijst's own h1 does, so
   // every screen has one header line instead of a title stacked under the chip.
   // The role badge rides along with it (design line 179).
@@ -340,9 +339,9 @@ export function Lijst({ user }: { user: User }) {
         <Afsluiten user={user} period={period} entries={entries} people={people} myRole={myRole} onToast={toast} onKlaar={() => setScherm(undefined)} />
       ) : open === 'Betalen' ? (
         <Betalen user={user} people={people} periodes={periodes} group={group} onToast={toast} />
-      ) : (
-        <p style={{ font: '500 12px "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.5)' }}>Komt nog.</p>
-      )}
+      ) : open === 'Inningen' ? (
+        <Inningen user={user} periodes={periodes} onToast={toast} />
+      ) : null}
     </div>
   )
 
