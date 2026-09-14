@@ -132,6 +132,28 @@ export const meldBetaling = (pid: string, personRef: string) =>
 export const herroepBetaling = (pid: string, personRef: string) =>
   deleteDoc(doc(db, 'periods', pid, 'betalingen', personRef))
 
+/** All of one period's betalingen at once (TASK-11's Inningen, the drankleider's
+ *  reconcile screen) — one onSnapshot on the subcollection instead of one
+ *  useBetaling per row. No doc = open, same convention as useBetaling above. */
+export function useBetalingen(pid: string | undefined) {
+  const [statussen, setStatussen] = useState<Map<string, BetalingStatus>>(new Map())
+
+  useEffect(() => {
+    if (!pid) return
+    return onSnapshot(collection(db, 'periods', pid, 'betalingen'), (snap) =>
+      setStatussen(new Map(snap.docs.map((d) => [d.id, (d.data().status as BetalingStatus) ?? 'open']))),
+    )
+  }, [pid])
+
+  return statussen
+}
+
+/** The drankleider ticking someone off in Inningen — the only path that ever
+ *  writes 'betaald' (firestore.rules:104-110). Reopening reuses herroepBetaling
+ *  above (delete = open) for both a self-herroep and the drankleider's own. */
+export const vinkAfBetaling = (pid: string, personRef: string, byUid: string) =>
+  setDoc(doc(db, 'periods', pid, 'betalingen', personRef), { status: 'betaald', at: serverTimestamp(), by: byUid })
+
 export type Rol = 'lid' | 'drankleider' | 'beheerder'
 
 export type Group = { naam: string; iban: string; begunstigde: string }
