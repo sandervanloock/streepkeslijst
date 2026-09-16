@@ -27,11 +27,9 @@ export const signOut = () => fbSignOut(auth)
  *  exists, so an uninvited address makes this batch fail as a whole. */
 const claimInvite = (u: User) => {
   const batch = writeBatch(db)
-  batch.set(doc(db, 'users', u.uid), {
-    ...userDoc(u),
-    nick: u.displayName?.split(' ')[0] ?? '?',
-    role: 'lid',
-  })
+  // Geen nick: die kiest de nieuwkomer zelf (Mijn profiel / het welkomstrondje).
+  // Tot dan valt usePeople terug op name.
+  batch.set(doc(db, 'users', u.uid), { ...userDoc(u), role: 'lid' })
   batch.delete(doc(db, 'invites', (u.email ?? '').toLowerCase()))
   return batch.commit()
 }
@@ -47,18 +45,23 @@ export function useAuth() {
   useEffect(
     () =>
       onAuthStateChanged(auth, (u) => {
-        setUser(u)
-        if (!u) return
+        if (!u) return setUser(null)
         setAuthError(undefined)
 
+        // De user komt pas naar buiten als users/{uid} er zeker staat: elke
+        // listener in data.ts hangt aan isMember() in firestore.rules, en een
+        // onSnapshot die permission-denied krijgt sterft definitief. Bij een
+        // eerste login (claimInvite is dan nog bezig) leverde dat een blanco
+        // scherm met "Missing or insufficient permissions" tot een refresh.
         const ref = doc(db, 'users', u.uid)
         getDoc(ref)
           .then((snap) => {
             if (snap.exists()) {
+              setUser(u)
               // Al lid: alleen de Google-profielvelden verversen, nick en role nooit aanraken.
               return setDoc(ref, userDoc(u), { merge: true })
             }
-            return claimInvite(u).catch(() => {
+            return claimInvite(u).then(() => setUser(u)).catch(() => {
               setAuthError('Dit Google-account is niet uitgenodigd voor deze groep.')
               return fbSignOut(auth)
             })

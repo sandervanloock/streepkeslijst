@@ -92,7 +92,8 @@ test('AC7: an invited address claims the invite atomically and creates users/{ui
   await wacht()
 
   expect(calls.batchSet).toEqual([
-    ['users/u9', { name: 'Nieuwe Naam', email: 'Nieuw@Mail.be', photoURL: null, lastLogin: 'TS', nick: 'Nieuwe', role: 'lid' }],
+    // geen nick: die kiest de nieuwkomer zelf
+    ['users/u9', { name: 'Nieuwe Naam', email: 'Nieuw@Mail.be', photoURL: null, lastLogin: 'TS', role: 'lid' }],
   ])
   // het adres wordt lowercased: het invite-document staat op het lowercased adres
   expect(calls.batchDelete).toEqual(['invites/nieuw@mail.be'])
@@ -124,6 +125,17 @@ test('reading your own doc failing (e.g. rules not deployed yet) signs out inste
 
   expect(fbSignOut).toHaveBeenCalledTimes(1)
   expect(result.current[1]).toBe('Aanmelden lukte niet. Probeer het opnieuw.')
+})
+
+test('de user komt pas naar buiten als users/{uid} bestaat, anders sterven de listeners op permission-denied', async () => {
+  bestaatAl = false
+  const { result } = renderHook(() => useAuth())
+  const nieuw = { uid: 'u9', displayName: 'Nieuwe Naam', email: 'nieuw@mail.be', photoURL: null }
+
+  act(() => authCb!(nieuw))
+  expect(result.current[0]).toBeUndefined() // claimInvite loopt nog: nog niks renderen
+  await wacht()
+  expect(result.current[0]).toBe(nieuw)
 })
 
 test('an existing member only gets the Google profile fields refreshed, not a fresh nick or role', async () => {
