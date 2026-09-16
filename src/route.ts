@@ -16,6 +16,10 @@ const schermen: Record<string, string> = {
   inningen: 'Inningen',
   afsluiten: 'Periode afsluiten',
   beheer: 'Beheer',
+  // TASK-12: the Welkomstrondje's own hash so a refresh stays on it. Deliberately
+  // not in Lijst.tsx's alleNav — it gets no menu entry, only the subtle restart
+  // link on Mijn profiel and the first-login gate.
+  rondje: 'Hoe werkt het',
 }
 
 const slugs: Record<string, string> = Object.fromEntries(

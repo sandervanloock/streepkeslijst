@@ -103,3 +103,9 @@ test('AC6: de mededeling-preview volgt wat je typt', () => {
   fireEvent.change(screen.getByDisplayValue('Sander'), { target: { value: 'Wollie' } })
   expect(screen.getByText('Mededeling: STREEPJES P3 01/09-30/09 WOLLIE')).toBeTruthy()
 })
+
+test('TASK-12 AC8: een subtiele link onder de profielkaart herstart het welkomstrondje via #/rondje', () => {
+  render(<Profiel user={me} people={people} period={period} onToast={vi.fn()} />)
+  const link = screen.getByText('Welkomstrondje nog eens bekijken') as HTMLAnchorElement
+  expect(link.getAttribute('href')).toBe('#/rondje')
+})

@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics="">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Anton&amp;family=Space+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E8E4D9;font-family:'Space Grotesk',system-ui,sans-serif}
+a{color:#121310}a:hover{color:#000}
+@keyframes chalkIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes streepIn{from{opacity:0;transform:scaleY(.2)}to{opacity:1;transform:none}}
+@keyframes sheetUp{from{transform:translateY(105%)}to{transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes wiebel{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+</style>
+</helmet>
+
+<div style="min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:34px 20px 60px;background:#E8E4D9;background-image:radial-gradient(80% 50% at 50% 0%,rgba(18,19,16,.06),transparent 70%)">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:14px">
+    <div style="text-align:center">
+      <div style="font:400 10px ui-monospace,Menlo,monospace;letter-spacing:.18em;color:rgba(18,19,16,.45)">CHIRO ELZESTRAAT · EERSTE KEER</div>
+      <div style="font:400 26px/1 Anton,sans-serif;color:#121310;text-transform:uppercase;margin-top:7px">Welkomstrondje</div>
+      <div style="font:400 11.5px/1.5 'Space Grotesk',sans-serif;color:rgba(18,19,16,.55);margin-top:6px;max-width:430px">Vier schermen na het inloggen, voor gewone leiders: wat de lijst is, hoe je een streepje zet, hoe je heet op de lijst en wat je op het einde betaalt. Overal rechtsboven overslaan.</div>
+    </div>
+
+    <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">
+      <sc-for list="{{ chips }}" as="c" hint-placeholder-count="5">
+        <div onClick="{{ c.kies }}" style="font:500 11px 'Space Grotesk',sans-serif;padding:6px 11px;border-radius:99px;cursor:pointer;border:1px solid {{ c.rand }};background:{{ c.bg }};color:{{ c.fg }}">{{ c.label }}</div>
+      </sc-for>
+    </div>
+
+    <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+      <div style="height:100%;background:#121310;background-image:radial-gradient(120% 50% at 50% -8%,rgba(216,246,81,.1),transparent 62%),repeating-linear-gradient(0deg,rgba(255,255,255,.014) 0 1px,transparent 1px 3px);position:relative;overflow:hidden;display:flex;flex-direction:column">
+
+        <div style="flex:none;padding:62px 20px 0;display:flex;align-items:center;gap:12px">
+          <div style="display:flex;align-items:flex-end;gap:5px;height:18px;flex:none">
+            <sc-for list="{{ voortgang }}" as="v" hint-placeholder-count="5">
+              <div style="width:3px;height:{{ v.hoog }}px;border-radius:2px;background:{{ v.kleur }};transform:rotate({{ v.kant }}deg)"></div>
+            </sc-for>
+          </div>
+          <div style="flex:1;font:400 9.5px ui-monospace,monospace;letter-spacing:.14em;color:rgba(244,241,230,.38)">{{ stapTeller }}</div>
+          <sc-if value="{{ kanOverslaan }}" hint-placeholder-val="{{ true }}">
+            <div onClick="{{ vraagOverslaan }}" style="flex:none;padding:7px 13px;border-radius:99px;border:1px solid rgba(244,241,230,.18);font:500 11.5px 'Space Grotesk',sans-serif;color:rgba(244,241,230,.6);cursor:pointer" style-active="background:rgba(244,241,230,.08)">Overslaan</div>
+          </sc-if>
+        </div>
+
+        <div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;padding:0 20px 20px">
+
+          <sc-if value="{{ s1 }}" hint-placeholder-val="{{ true }}">
+            <div style="flex:1;min-height:0;display:flex;flex-direction:column;animation:chalkIn .4s ease both">
+              <div style="flex:1;min-height:14px"></div>
+              <div style="display:flex;align-items:flex-end;gap:10px;height:96px">
+                <div style="width:6px;height:82px;border-radius:3px;background:#D8F651;transform:rotate(-4deg)"></div>
+                <div style="width:6px;height:90px;border-radius:3px;background:#D8F651;transform:rotate(2deg)"></div>
+                <div style="width:6px;height:78px;border-radius:3px;background:#D8F651;transform:rotate(-2deg)"></div>
+                <div style="width:6px;height:88px;border-radius:3px;background:#D8F651;transform:rotate(4deg);margin-right:8px"></div>
+                <div style="position:absolute;width:74px;height:6px;border-radius:3px;background:#D8F651;transform:rotate(-34deg);margin-bottom:34px"></div>
+              </div>
+              <h1 style="margin:26px 0 0;font:400 46px/0.9 Anton,sans-serif;color:#F4F1E6;text-transform:uppercase;letter-spacing:-.01em">Welkom<br>op de lijst</h1>
+              <div style="margin-top:14px;font:400 14px/1.55 'Space Grotesk',sans-serif;color:rgba(244,241,230,.6);max-width:290px">Je zit nu op de streepkeslijst van <strong style="color:#F4F1E6">Chiro Elzestraat</strong>. Eerst: hoe heet jij op de lijst? Daarna tonen we hoe je een streepje zet.</div>
+              <div style="margin-top:18px;display:flex;gap:8px">
+                <div style="flex:1;border:1px solid rgba(244,241,230,.12);border-radius:10px;background:#1B1D17;padding:11px 12px">
+                  <div style="font:400 22px/1 Anton,sans-serif;color:#D8F651">€0,70</div>
+                  <div style="margin-top:4px;font:500 9.5px 'Space Grotesk',sans-serif;letter-spacing:.06em;color:rgba(244,241,230,.42)">PER STREEPJE</div>
+                </div>
+                <div style="flex:1;border:1px solid rgba(244,241,230,.12);border-radius:10px;background:#1B1D17;padding:11px 12px">
+                  <div style="font:400 22px/1 Anton,sans-serif;color:#F4F1E6">13</div>
+                  <div style="margin-top:4px;font:500 9.5px 'Space Grotesk',sans-serif;letter-spacing:.06em;color:rgba(244,241,230,.42)">LEIDERS OP DE LIJST</div>
+                </div>
+              </div>
+              <div style="flex:1;min-height:14px"></div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ s2 }}" hint-placeholder-val="{{ false }}">
+            <div style="flex:1;min-height:0;display:flex;flex-direction:column;animation:chalkIn .4s ease both">
+              <div style="flex:none;padding-top:22px">
+                <div style="font:400 9.5px ui-monospace,monospace;letter-spacing:.16em;color:#D8F651">PROBEER HET EVEN</div>
+                <h2 style="margin:9px 0 0;font:400 34px/0.95 Anton,sans-serif;color:#F4F1E6;text-transform:uppercase">Tik je eigen rij</h2>
+                <div style="margin-top:10px;font:400 13px/1.5 'Space Grotesk',sans-serif;color:rgba(244,241,230,.6)">{{ demoUitleg }}</div>
+              </div>
+
+              <div style="flex:1;min-height:12px"></div>
+
+              <div style="padding:0 2px 6px;display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <div style="font:400 9.5px ui-monospace,monospace;letter-spacing:.16em;color:rgba(244,241,230,.38);flex:1;min-width:0">{{ hintTekst }}</div>
+                <div onClick="{{ toggleGeluid }}" style="font:500 10px 'Space Grotesk',sans-serif;color:rgba(244,241,230,.55);padding:3px 7px;border:1px solid rgba(244,241,230,.16);border-radius:99px;cursor:pointer;flex:none">{{ geluidLabel }}</div>
+                <div onClick="{{ toggleCorrectie }}" style="font:500 10px 'Space Grotesk',sans-serif;padding:3px 7px;border-radius:99px;cursor:pointer;flex:none;border:1px solid {{ corrRand }};background:{{ corrBg }};color:{{ corrFg }}">{{ corrLabel }}</div>
+              </div>
+
+              <div onPointerDown="{{ demoDown }}" onPointerUp="{{ demoUp }}" onPointerLeave="{{ demoAf }}" onContextMenu="{{ demoGeenMenu }}" style="position:relative;border:1px solid {{ demoRand }};border-radius:12px;background:#1B1D17;padding:14px;cursor:pointer;user-select:none;touch-action:none;overflow:hidden" style-active="background:#20231B">
+                <div style="position:absolute;left:0;bottom:0;height:3px;width:{{ houdBreedte }};background:#F0A32B;transition:width .08s linear"></div>
+                <div style="display:flex;align-items:center;gap:11px">
+                  <div style="width:34px;height:34px;border-radius:99px;background:#D8F651;color:#121310;font:700 13px/34px 'Space Grotesk',sans-serif;text-align:center;flex:none">{{ demoLetter }}</div>
+                  <div style="flex:1;min-width:0">
+                    <div style="font:400 18px/1 Anton,sans-serif;color:#F4F1E6;text-transform:uppercase">{{ demoNick }}</div>
+                    <div style="margin-top:4px;font:400 10.5px 'Space Grotesk',sans-serif;color:rgba(244,241,230,.4)">jij · deze periode</div>
+                  </div>
+                  <div style="text-align:right;flex:none">
+                    <div style="font:400 26px/0.9 Anton,sans-serif;color:{{ demoKleur }}">{{ demoAantal }}</div>
+                    <div style="font:500 8.5px 'Space Grotesk',sans-serif;letter-spacing:.06em;color:rgba(244,241,230,.4)">STREEPJES</div>
+                    <sc-if value="{{ demoHeeftBak }}" hint-placeholder-val="{{ false }}">
+                      <div style="margin-top:5px;font:400 12px/1 Anton,sans-serif;letter-spacing:.05em;color:#F0A32B">{{ demoBakLabel }}</div>
+                    </sc-if>
+                  </div>
+                </div>
+                <div style="margin-top:13px;min-height:26px;display:flex;align-items:flex-end;gap:13px;flex-wrap:wrap">
+                  <sc-for list="{{ demoGroepen }}" as="g" hint-placeholder-count="1">
+                    <div style="position:relative;display:flex;align-items:flex-end;gap:5px;height:24px;animation:streepIn .18s ease both">
+                      <sc-for list="{{ g.strepen }}" as="st" hint-placeholder-count="3">
+                        <div style="width:3px;height:{{ st.hoog }}px;border-radius:2px;background:#F4F1E6;transform:rotate({{ st.kant }}deg)"></div>
+                      </sc-for>
+                      <sc-if value="{{ g.dwars }}" hint-placeholder-val="{{ false }}">
+                        <div style="position:absolute;left:-2px;bottom:6px;width:32px;height:3px;border-radius:2px;background:#F4F1E6;transform:rotate(-24deg)"></div>
+                      </sc-if>
+                    </div>
+                  </sc-for>
+                  <sc-if value="{{ demoLeeg }}" hint-placeholder-val="{{ true }}">
+                    <div style="font:400 11.5px 'Space Grotesk',sans-serif;color:rgba(244,241,230,.3);animation:wiebel 1.6s ease-in-out infinite">tik hier om te tellen ↑</div>
+                  </sc-if>
+                </div>
+              </div>
+
+              <div style="margin-top:11px;display:flex;flex-direction:column;gap:7px">
+                <sc-for list="{{ gebaren }}" as="g" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:10px;padding:5px 7px;margin:0 -7px;border-radius:8px;background:{{ g.rijBg }}">
+                    <div style="font:400 10px/1 ui-monospace,monospace;letter-spacing:.1em;color:{{ g.kleur }};background:{{ g.bg }};border-radius:4px;padding:5px 7px;flex:none;min-width:58px;text-align:center">{{ g.hoe }}</div>
+                    <div style="flex:1;font:400 12px/1.45 'Space Grotesk',sans-serif;color:{{ g.tekstKleur }}">{{ g.wat }}</div>
+                    <sc-if value="{{ g.aan }}" hint-placeholder-val="{{ false }}">
+                      <div style="flex:none;font:400 9px/1 ui-monospace,monospace;letter-spacing:.1em;color:#E4483A">AAN</div>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div style="flex:1;min-height:12px"></div>
+              <div onClick="{{ demoReset }}" style="text-align:center;font:500 11px 'Space Grotesk',sans-serif;color:rgba(244,241,230,.35);cursor:pointer;padding:4px">Demo terugzetten</div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ s3 }}" hint-placeholder-val="{{ false }}">
+            <div style="flex:1;min-height:0;display:flex;flex-direction:column;animation:chalkIn .4s ease both">
+              <div style="flex:none;padding-top:22px">
+                <div style="font:400 9.5px ui-monospace,monospace;letter-spacing:.16em;color:#D8F651">JOUW PLEK OP DE LIJST</div>
+                <h2 style="margin:9px 0 0;font:400 34px/0.95 Anton,sans-serif;color:#F4F1E6;text-transform:uppercase">Hoe noemen ze je?</h2>
+                <div style="margin-top:10px;font:400 13px/1.5 'Space Grotesk',sans-serif;color:rgba(244,241,230,.6)">Je Chironaam staat groot op de lijst. Je echte naam staat er klein bij, zodat nieuwe leiding weet wie wie is.</div>
+              </div>
+
+              <div style="margin-top:18px;display:flex;flex-direction:column;gap:9px">
+                <div style="border:1px solid {{ nickRand }};border-radius:10px;background:#1B1D17;padding:11px 13px">
+                  <div style="font:400 9.5px ui-monospace,monospace;letter-spacing:.14em;color:rgba(244,241,230,.4)">CHIRONAAM</div>
+                  <input value="{{ nick }}" onChange="{{ zetNick }}" placeholder="bv. Wollie" style="width:100%;margin-top:5px;background:transparent;border:none;outline:none;color:#F4F1E6;font:400 24px/1.1 Anton,sans-serif;text-transform:uppercase">
+                </div>
+
+
+                <div style="border:1px solid rgba(244,241,230,.12);border-radius:10px;background:#1B1D17;padding:11px 13px">
+                  <div style="font:400 9.5px ui-monospace,monospace;letter-spacing:.14em;color:rgba(244,241,230,.4)">ECHTE NAAM</div>
+                  <input value="{{ naam }}" onChange="{{ zetNaam }}" placeholder="Voornaam Achternaam" style="width:100%;margin-top:5px;background:transparent;border:none;outline:none;color:#F4F1E6;font:500 15px 'Space Grotesk',sans-serif">
+                </div>
+                <sc-if value="{{ nickFout }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:10px 11px;border-radius:8px;background:rgba(228,72,58,.16);border:1px solid #E4483A;font:500 11.5px 'Space Grotesk',sans-serif;color:#F4F1E6">{{ nickFout }}</div>
+                </sc-if>
+              </div>
+
+              <div style="margin-top:16px">
+                <div style="font:400 9.5px ui-monospace,monospace;letter-spacing:.14em;color:rgba(244,241,230,.35)">ZO STA JE STRAKS IN DE LIJST</div>
+                <div style="margin-top:8px;border:1px solid rgba(216,246,81,.35);border-radius:12px;background:rgba(216,246,81,.07);padding:13px 14px;display:flex;align-items:center;gap:11px">
+                  <div style="width:34px;height:34px;border-radius:99px;background:#D8F651;color:#121310;font:700 13px/34px 'Space Grotesk',sans-serif;text-align:center;flex:none">{{ demoLetter }}</div>
+                  <div style="flex:1;min-width:0">
+                    <div style="font:400 18px/1 Anton,sans-serif;color:#F4F1E6;text-transform:uppercase">{{ demoNick }}</div>
+                    <div style="margin-top:4px;font:400 10.5px 'Space Grotesk',sans-serif;color:rgba(244,241,230,.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ naamPreview }}</div>
+                  </div>
+                  <div style="font:400 22px/0.9 Anton,sans-serif;color:#F4F1E6;flex:none">{{ demoAantal }}</div>
+                </div>
+              </div>
+
+              <div style="flex:1;min-height:12px"></div>
+              <div style="font:400 10.5px/1.5 'Space Grotesk',sans-serif;color:rgba(244,241,230,.35)">Later te wijzigen bij Profiel.</div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ s4 }}" hint-placeholder-val="{{ false }}">
+            <div style="flex:1;min-height:0;display:flex;flex-direction:column;animation:chalkIn .4s ease both">
+              <div style="flex:none;padding-top:22px">
+                <div style="font:400 9.5px ui-monospace,monospace;letter-spacing:.16em;color:#D8F651">EEN KEER PER PERIODE</div>
+                <h2 style="margin:9px 0 0;font:400 34px/0.95 Anton,sans-serif;color:#F4F1E6;text-transform:uppercase">En dan betalen</h2>
+                <div style="margin-top:10px;font:400 13px/1.5 'Space Grotesk',sans-serif;color:rgba(244,241,230,.6)">Een beheerder sluit de periode af en deelt één bericht in de groep. Jouw bedrag vind je altijd hier in de app.</div>
+              </div>
+
+              <div style="margin-top:18px;display:flex;flex-direction:column;gap:9px">
+                <sc-for list="{{ stappenUitleg }}" as="u" hint-placeholder-count="3">
+                  <div style="border:1px solid rgba(244,241,230,.12);border-radius:10px;background:#1B1D17;padding:12px 13px;display:flex;gap:11px;align-items:flex-start">
+                    <div style="font:400 15px/1 Anton,sans-serif;color:#D8F651;flex:none;width:16px;padding-top:2px">{{ u.nr }}</div>
+                    <div style="flex:1;min-width:0">
+                      <div style="font:400 15px/1 Anton,sans-serif;color:#F4F1E6;text-transform:uppercase;letter-spacing:.02em">{{ u.titel }}</div>
+                      <div style="margin-top:5px;font:400 11.5px/1.5 'Space Grotesk',sans-serif;color:rgba(244,241,230,.55)">{{ u.tekst }}</div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div style="margin-top:12px;border:1px solid rgba(216,246,81,.35);border-radius:10px;background:rgba(216,246,81,.07);padding:12px 13px">
+                <div style="font:400 10px/1 ui-monospace,monospace;letter-spacing:.12em;color:rgba(244,241,230,.45)">JOUW VOORBEELD-AFREKENING</div>
+                <div style="margin-top:8px;display:flex;align-items:baseline;gap:8px">
+                  <div style="font:400 30px/1 Anton,sans-serif;color:#D8F651">{{ demoBedrag }}</div>
+                  <div style="font:500 11.5px 'Space Grotesk',sans-serif;color:rgba(244,241,230,.5)">{{ demoBedragUitleg }}</div>
+                </div>
+                <div style="margin-top:7px;font:400 10.5px/1.5 'Space Grotesk',sans-serif;color:rgba(244,241,230,.42)">Met mededeling {{ demoMededeling }} op BE68 5390 0754 7034.</div>
+              </div>
+
+              <div style="flex:1;min-height:12px"></div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ s5 }}" hint-placeholder-val="{{ false }}">
+            <div style="flex:1;min-height:0;display:flex;flex-direction:column;animation:chalkIn .4s ease both">
+              <div style="flex:1;min-height:14px"></div>
+              <div style="width:66px;height:66px;border-radius:16px;background:#D8F651;display:flex;align-items:flex-end;justify-content:center;gap:5px;padding-bottom:16px">
+                <div style="width:4px;height:30px;background:#121310;border-radius:2px;transform:rotate(-4deg)"></div>
+                <div style="width:4px;height:34px;background:#121310;border-radius:2px;transform:rotate(3deg)"></div>
+                <div style="width:4px;height:28px;background:#121310;border-radius:2px;transform:rotate(-2deg)"></div>
+              </div>
+              <h2 style="margin:22px 0 0;font:400 42px/0.92 Anton,sans-serif;color:#F4F1E6;text-transform:uppercase">{{ klaarKop }}</h2>
+              <div style="margin-top:13px;font:400 13.5px/1.55 'Space Grotesk',sans-serif;color:rgba(244,241,230,.6);max-width:280px">Je staat op de lijst van Chiro Elzestraat. Tik je eigen rij zodra je iets pakt — de rest regelt de app.</div>
+              <div style="margin-top:18px;border:1px solid rgba(244,241,230,.12);border-radius:10px;background:#1B1D17;padding:12px 13px;font:400 11.5px/1.55 'Space Grotesk',sans-serif;color:rgba(244,241,230,.5)">Dit rondje opnieuw bekijken kan altijd via <strong style="color:#F4F1E6">Menu → Hoe werkt het</strong>.</div>
+              <div style="flex:1;min-height:14px"></div>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="flex:none;padding:0 20px 34px;display:flex;flex-direction:column;gap:10px">
+          <div onClick="{{ verder }}" style="height:58px;border-radius:99px;background:{{ knopBg }};color:#121310;display:grid;place-items:center;font:400 16px/1 Anton,sans-serif;letter-spacing:.03em;text-transform:uppercase;cursor:pointer;box-shadow:0 12px 30px rgba(0,0,0,.35)" style-active="transform:translateY(1px)">{{ knopLabel }}</div>
+          <sc-if value="{{ kanTerug }}" hint-placeholder-val="{{ false }}">
+            <div onClick="{{ terug }}" style="text-align:center;font:500 11.5px 'Space Grotesk',sans-serif;color:rgba(244,241,230,.42);cursor:pointer;padding:2px">Terug</div>
+          </sc-if>
+        </div>
+
+        <sc-if value="{{ bakOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ bakSluit }}" style="position:absolute;inset:0;z-index:70;background:rgba(10,11,9,.62);animation:fadeIn .2s ease both"></div>
+        </sc-if>
+        <sc-if value="{{ bakOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;left:0;right:0;bottom:0;z-index:80;background:#1B1D17;border-top:2px solid #F0A32B;border-radius:18px 18px 0 0;padding:18px 18px 40px;animation:sheetUp .24s cubic-bezier(.2,.9,.25,1) both">
+            <div style="font:400 10px ui-monospace,monospace;letter-spacing:.16em;color:#F0A32B">EEN HELE BAK</div>
+            <div style="font:400 34px/1 Anton,sans-serif;color:#F4F1E6;text-transform:uppercase;margin:6px 0 2px">{{ demoNick }}</div>
+            <div style="font:400 12px 'Space Grotesk',sans-serif;color:rgba(244,241,230,.55)">{{ bakUitleg }}</div>
+            <div style="display:flex;align-items:center;gap:14px;margin:18px 0">
+              <div onClick="{{ bakMin }}" style="width:52px;height:52px;border-radius:99px;border:1px solid rgba(244,241,230,.2);display:grid;place-items:center;font:400 26px/1 Anton,sans-serif;color:#F4F1E6;cursor:pointer;flex:none">–</div>
+              <div style="flex:1;text-align:center">
+                <div style="font:400 46px/1 Anton,sans-serif;color:#F0A32B">{{ bakAantal }}</div>
+                <div style="font:500 10px 'Space Grotesk',sans-serif;letter-spacing:.1em;color:rgba(244,241,230,.45)">BAK(KEN)</div>
+              </div>
+              <div onClick="{{ bakPlus }}" style="width:52px;height:52px;border-radius:99px;border:1px solid rgba(244,241,230,.2);display:grid;place-items:center;font:400 26px/1 Anton,sans-serif;color:#F4F1E6;cursor:pointer;flex:none">+</div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <div onClick="{{ bakSluit }}" style="flex:none;padding:14px 18px;border-radius:8px;border:1px solid rgba(244,241,230,.2);font:500 12px 'Space Grotesk',sans-serif;color:rgba(244,241,230,.7);cursor:pointer">Laat maar</div>
+              <div onClick="{{ bakBevestig }}" style="flex:1;padding:14px;border-radius:8px;background:#F0A32B;color:#121310;text-align:center;font:400 15px/1 Anton,sans-serif;letter-spacing:.04em;text-transform:uppercase;cursor:pointer">Zet erbij</div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ overslaanOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ sluit }}" style="position:absolute;inset:0;background:rgba(10,11,9,.62);animation:fadeIn .2s ease both"></div>
+        </sc-if>
+        <sc-if value="{{ overslaanOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;left:0;right:0;bottom:0;background:#1B1D17;border-top:1px solid rgba(244,241,230,.14);border-radius:20px 20px 0 0;padding:18px 20px 30px;animation:sheetUp .28s cubic-bezier(.2,.9,.25,1) both">
+            <div style="width:38px;height:4px;border-radius:99px;background:rgba(244,241,230,.2);margin:0 auto 16px"></div>
+            <div style="font:400 24px/1 Anton,sans-serif;color:#F4F1E6;text-transform:uppercase">Rondje overslaan?</div>
+            <div style="margin-top:10px;font:400 12.5px/1.6 'Space Grotesk',sans-serif;color:rgba(244,241,230,.6)">{{ overslaanZin }}</div>
+            <div style="margin-top:16px;display:flex;flex-direction:column;gap:9px">
+              <div onClick="{{ sluit }}" style="height:54px;border-radius:99px;background:#F4F1E6;color:#121310;display:grid;place-items:center;font:400 15px/1 Anton,sans-serif;letter-spacing:.03em;text-transform:uppercase;cursor:pointer">Toch verder kijken</div>
+              <div onClick="{{ overslaan }}" style="height:52px;border-radius:99px;border:1px solid rgba(244,241,230,.2);color:rgba(244,241,230,.8);display:grid;place-items:center;font:500 12.5px 'Space Grotesk',sans-serif;cursor:pointer">Naar de lijst</div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;left:18px;right:18px;bottom:112px;background:#F4F1E6;color:#121310;border-radius:10px;padding:12px 14px;font:500 12px 'Space Grotesk',sans-serif;box-shadow:0 14px 34px rgba(0,0,0,.4);animation:chalkIn .22s ease both">{{ toast }}</div>
+        </sc-if>
+
+      </div>
+    </x-import>
+
+    <div style="font:400 10px/1.6 ui-monospace,monospace;letter-spacing:.12em;color:rgba(18,19,16,.35);text-align:center;max-width:400px">NA <a href="./Login.dc.html">LOGIN</a> · VOOR <a href="./Streepkeslijst App.dc.html">DE LIJST</a></div>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;520&quot;,&quot;height&quot;:&quot;1060&quot;}}">
+class Component extends DCLogic {
+  state = {
+    stap: 1, nick: '', naam: '', nickFout: null,
+    demo: 0, bak: 0, overslaan: false, toast: null, gom: false, houd: 0, hadBak: false,
+    bakOpen: false, bakAantal: 1, geluid: true
+  };
+
+  zeg(t) {
+    clearTimeout(this._tt);
+    this.setState({ toast: t });
+    this._tt = setTimeout(() => this.setState({ toast: null }), 2200);
+  }
+
+  componentWillUnmount() { clearTimeout(this._tt); this.stopHouden(); }
+
+  // Zelfde gebaren als in de app: tik = 1, 620 ms vasthouden opent het bakvenster
+  // (in gomstand haalt vasthouden meteen een bak weg, net als daar).
+  perBak = 24;
+  prijs = 0.7;
+
+  // Zelfde tik- en bakgeluidjes als in de app
+  klik(soort) {
+    if (!this.state.geluid) { if (navigator.vibrate) navigator.vibrate(soort === 'bak' ? [14, 40, 22] : 11); return; }
+    try {
+      if (!this.ac) this.ac = new (window.AudioContext || window.webkitAudioContext)();
+      const ac = this.ac, dur = soort === 'bak' ? 0.26 : 0.07;
+      if (ac.state === 'suspended') ac.resume();
+      const buf = ac.createBuffer(1, Math.ceil(ac.sampleRate * dur), ac.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, soort === 'bak' ? 1.4 : 2.6);
+      const src = ac.createBufferSource(); src.buffer = buf;
+      const bp = ac.createBiquadFilter(); bp.type = 'bandpass';
+      bp.frequency.value = soort === 'bak' ? 900 : 2400; bp.Q.value = soort === 'bak' ? 1.1 : 2.4;
+      const g = ac.createGain(); g.gain.value = soort === 'bak' ? 0.4 : 0.22;
+      src.connect(bp); bp.connect(g); g.connect(ac.destination); src.start(ac.currentTime);
+    } catch (e) { }
+    if (navigator.vibrate) navigator.vibrate(soort === 'bak' ? [14, 40, 22] : 11);
+  }
+
+  stopHouden() { clearTimeout(this._hold); clearInterval(this._tick); this._hold = null; this._tick = null; }
+
+  demoDown = () => {
+    if (this.state.bakOpen) return;
+    this.setState({ houd: 0 });
+    const start = Date.now();
+    this._tick = setInterval(() => this.setState({ houd: Math.min(1, (Date.now() - start) / 620) }), 40);
+    this._hold = setTimeout(() => {
+      this.stopHouden();
+      this.setState({ houd: 0 });
+      if (this.state.gom) {
+        if (this.state.bak > 0) { this.setState(x => ({ bak: Math.max(0, x.bak - 1) })); this.klik('bak'); this.zeg('Een bak weggehaald'); }
+        else this.zeg('Er staan geen bakken om weg te halen');
+      } else {
+        this.setState({ bakOpen: true, bakAantal: 1 });
+        if (navigator.vibrate) navigator.vibrate(14);
+      }
+    }, 620);
+  };
+
+  demoUp = () => {
+    if (!this._hold) return;
+    this.stopHouden();
+    this.setState(x => ({ demo: x.gom ? Math.max(0, x.demo - 1) : Math.min(96, x.demo + 1), houd: 0 }));
+    this.klik('streep');
+  };
+
+  demoAf = () => { this.stopHouden(); this.setState({ houd: 0 }); };
+
+  bakBevestig = () => {
+    const n = this.state.bakAantal;
+    this.setState(x => ({ bak: x.bak + n, bakOpen: false, bakAantal: 1, hadBak: true }));
+    this.klik('bak');
+    this.zeg(n + ' bak' + (n > 1 ? 'ken' : '') + ' erbij · apart geteld van je streepjes');
+  };
+
+  ga = (n) => this.setState({ stap: n, overslaan: false, nickFout: null });
+
+  verder = () => {
+    const s = this.state;
+    if (s.stap === 2 && !s.nick.trim()) { this.setState({ nickFout: 'Kies een Chironaam — of tik een van de voorstellen aan.' }); return; }
+    if (s.stap === 5) { this.zeg('Klaar — je gaat naar de lijst'); return; }
+    if (s.stap === 2) this.zeg('Opgeslagen als ' + s.nick.trim());
+    this.ga(s.stap + 1);
+  };
+
+  renderVals() {
+    const s = this.state;
+    const nick = s.nick.trim();
+    const toonNick = nick || 'Naamloos';
+    const prijs = this.prijs;
+    const bedrag = s.demo * prijs + s.bak * this.perBak * prijs;
+    const groepen = [];
+    for (let i = 0; i < s.demo; i += 5) {
+      const n = Math.min(5, s.demo - i), dwars = n === 5;
+      groepen.push({
+        dwars,
+        strepen: Array.from({ length: dwars ? 4 : n }, (_, k) => ({
+          hoog: 20 + ((i + k) % 3),
+          kant: [-3, 2, -1, 4][(i + k) % 4]
+        }))
+      });
+    }
+    const labels = ['Welkom', 'Jouw naam', 'Streepje zetten', 'Afrekenen', 'Klaar'];
+    const demoTekst = s.gom
+      ? 'Gomstand staat aan: tikken haalt er één weg, vasthouden een hele bak. Tik "klaar" rechtsboven als je weer bijtelt.'
+      : !s.demo ? 'Dit is jouw rij. Tik erop en er komt een streepje bij — precies zoals in de echte lijst.'
+      : s.hadBak ? 'De bakken staan erbij. Vergist? Zet de gomstand hieronder aan.'
+      : s.demo >= 5 ? 'Vijf bij elkaar krijgen een dwarsstreep, net als op papier. Hou de rij nu eens vast voor een bak.'
+      : 'Zie je? Eén tik, één streepje. Hou de rij vast om bakken te zetten.';
+
+    return {
+      chips: labels.map((label, i) => {
+        const n = i + 1, aan = s.stap === n;
+        return {
+          label: n + '. ' + label,
+          rand: aan ? '#121310' : 'rgba(18,19,16,.22)',
+          bg: aan ? '#121310' : 'transparent',
+          fg: aan ? '#F4F1E6' : 'rgba(18,19,16,.6)',
+          kies: () => this.ga(n)
+        };
+      }),
+      voortgang: labels.map((_, i) => ({
+        hoog: 14 + (i % 3),
+        kant: [-4, 2, -2, 4, -1][i],
+        kleur: i < s.stap ? '#D8F651' : 'rgba(244,241,230,.2)'
+      })),
+      stapTeller: 'STAP ' + s.stap + ' VAN 5 · ' + labels[s.stap - 1].toUpperCase(),
+      s1: s.stap === 1, s3: s.stap === 2, s2: s.stap === 3, s4: s.stap === 4, s5: s.stap === 5,
+      kanOverslaan: s.stap < 5,
+      kanTerug: s.stap > 1,
+      knopLabel: s.stap === 5 ? 'Naar de lijst' : s.stap === 2 ? 'Dit ben ik' : s.stap === 3 ? 'Snap het' : 'Verder',
+      knopBg: s.stap === 5 || s.stap === 2 ? '#D8F651' : '#F4F1E6',
+      verder: this.verder,
+      terug: () => this.ga(Math.max(1, s.stap - 1)),
+      vraagOverslaan: () => this.setState({ overslaan: true }),
+      overslaan: () => { this.setState({ overslaan: false }); this.zeg('Rondje overgeslagen · terug te vinden bij Menu'); },
+      sluit: () => this.setState({ overslaan: false }),
+      overslaanOpen: s.overslaan,
+      toast: s.toast,
+
+      demoUitleg: demoTekst,
+      demoDown: this.demoDown,
+      demoUp: this.demoUp,
+      demoAf: this.demoAf,
+      demoGeenMenu: e => e.preventDefault(),
+      houdBreedte: (s.houd * 100).toFixed(0) + '%',
+      demoReset: () => this.setState({ demo: 0, bak: 0, gom: false, hadBak: false, houd: 0, bakOpen: false, bakAantal: 1, geluid: true }),
+      bakOpen: s.bakOpen,
+      bakAantal: s.bakAantal,
+      bakUitleg: this.perBak + ' streepjes per bak · ' + (s.bakAantal * this.perBak) + ' streepjes voor ' + s.bakAantal + ' bak' + (s.bakAantal > 1 ? 'ken' : ''),
+      bakMin: () => this.setState(x => ({ bakAantal: Math.max(1, x.bakAantal - 1) })),
+      bakPlus: () => this.setState(x => ({ bakAantal: Math.min(9, x.bakAantal + 1) })),
+      bakSluit: () => this.setState({ bakOpen: false, bakAantal: 1 }),
+      bakBevestig: this.bakBevestig,
+      demoAantal: s.demo,
+      demoGroepen: groepen,
+      demoLeeg: s.demo === 0,
+      demoKleur: s.gom ? '#E4483A' : s.demo > 0 ? '#D8F651' : 'rgba(244,241,230,.3)',
+      demoRand: s.gom ? '#E4483A' : s.demo > 0 ? 'rgba(216,246,81,.4)' : 'rgba(244,241,230,.14)',
+      demoNick: toonNick,
+      demoLetter: toonNick.charAt(0).toUpperCase(),
+      demoHeeftBak: s.bak > 0,
+      demoBakLabel: '+ ' + s.bak + (s.bak > 1 ? ' BAKKEN' : ' BAK'),
+      demoBedrag: '€' + bedrag.toFixed(2).replace('.', ','),
+      demoBedragUitleg: 'voor ' + s.demo + ' streepjes' + (s.bak ? ' en ' + s.bak + ' bak' + (s.bak > 1 ? 'ken' : '') : ''),
+      demoMededeling: toonNick.toUpperCase() + ' P7',
+
+      nick: s.nick,
+      naam: s.naam,
+      naamPreview: s.naam.trim() || 'je echte naam',
+      klaarKop: nick ? 'Klaar, ' + nick : 'Klaar',
+      overslaanZin: nick
+        ? 'Je gaat meteen naar de lijst. Je staat er als ' + nick + ' — later te wijzigen bij Profiel.'
+        : 'Je gaat meteen naar de lijst. Je staat er voorlopig zonder naam; die zet je erbij via Profiel.',
+      nickFout: s.nickFout,
+      nickRand: s.nickFout ? '#E4483A' : nick ? 'rgba(216,246,81,.45)' : 'rgba(244,241,230,.12)',
+      zetNick: e => this.setState({ nick: e.target.value, nickFout: null }),
+      zetNaam: e => this.setState({ naam: e.target.value }),
+      suggesties: ['Wollie', 'Pinda', 'Kwik'].map(n => ({ naam: n, kies: () => this.setState({ nick: n, nickFout: null }) })),
+
+      hintTekst: s.gom ? 'TIK = –1 · VASTHOUDEN = – BAK' : 'TIK = +1 · VASTHOUDEN = BAK',
+      geluidLabel: s.geluid ? 'geluid aan' : 'geluid uit',
+      toggleGeluid: () => { this.setState(x => ({ geluid: !x.geluid })); this.zeg(s.geluid ? 'Geluid uit · je voelt enkel de tril' : 'Geluid aan · elke streep tikt'); },
+      corrLabel: s.gom ? 'klaar' : 'corrigeren',
+      corrBg: s.gom ? '#E4483A' : 'transparent',
+      corrFg: s.gom ? '#fff' : 'rgba(244,241,230,.55)',
+      corrRand: s.gom ? '#E4483A' : 'rgba(244,241,230,.16)',
+      toggleCorrectie: () => { this.setState(x => ({ gom: !x.gom })); this.zeg(s.gom ? 'Gomstand uit · je telt weer bij' : 'Gomstand aan · tikken haalt weg'); },
+      gebaren: [
+        { hoe: 'TIK', wat: s.gom ? 'één streepje weg' : 'één streepje erbij', kleur: '#121310', bg: '#D8F651',
+          tekstKleur: 'rgba(244,241,230,.58)', rijBg: 'transparent', aan: false },
+        { hoe: 'VASTHOUDEN', wat: s.gom ? 'een hele bak weg' : 'opent het bakvenster: kies hoeveel bakken', kleur: '#121310', bg: '#F0A32B',
+          tekstKleur: 'rgba(244,241,230,.58)', rijBg: 'transparent', aan: false },
+        { hoe: 'CORRIGEREN', wat: s.gom ? 'staat aan: alles wat je tikt gaat er nu af — tik "klaar" als je weer bijtelt' : 'rechtsboven de lijst: zet de gomstand aan om iets weg te halen',
+          kleur: s.gom ? '#fff' : '#F4F1E6', bg: s.gom ? '#E4483A' : 'rgba(244,241,230,.1)',
+          tekstKleur: s.gom ? '#F4F1E6' : 'rgba(244,241,230,.58)', rijBg: s.gom ? 'rgba(228,72,58,.14)' : 'transparent', aan: s.gom },
+        { hoe: 'GELUID', wat: s.geluid ? 'staat aan: je hoort elke streep, zo weet je dat hij geteld is' : 'staat uit: geen tik, enkel een korte tril',
+          kleur: '#F4F1E6', bg: 'rgba(244,241,230,.1)', tekstKleur: 'rgba(244,241,230,.58)', rijBg: 'transparent', aan: false }
+      ],
+      stappenUitleg: [
+        { nr: '1', titel: 'De periode loopt', tekst: 'Een week of twee. Je ziet bovenaan altijd hoeveel streepjes je al staan hebt.' },
+        { nr: '2', titel: 'Beheerder sluit af', tekst: 'Vanaf dan komen er geen streepjes meer bij en ligt je bedrag vast.' },
+        { nr: '3', titel: 'Eén bericht in de groep', tekst: 'Met de rekening en de uiterste datum. Jouw eigen bedrag staat in de app, niet in het bericht.' }
+      ]
+    };
+  }
+}
+
+</script>
+</body>
+</html>

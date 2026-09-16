@@ -8,7 +8,12 @@ import { Lijst } from './Lijst'
 // the hooks read it back and re-render, which is exactly the loop the real
 // onSnapshot listeners drive. Everything above the data layer is the real thing.
 type Row = Entry & { id: string; by: string; byNick: string }
-const store = { entries: [] as Row[], guests: [] as { nick: string; naam: string; pid: string }[], mijnRol: 'lid' }
+const store = {
+  entries: [] as Row[],
+  guests: [] as { nick: string; naam: string; pid: string }[],
+  mijnRol: 'lid',
+  profiel: { nick: 'Sander', naam: 'Sander V.', mail: 'sander@x.be', rondje: true },
+}
 const listeners = new Set<() => void>()
 let n = 0
 
@@ -62,8 +67,16 @@ vi.mock('./data', async () => {
       listeners.forEach((l) => l())
       return Promise.resolve({ id: 'g' })
     },
-    useProfile: () => ({ nick: 'Sander', naam: 'Sander V.', mail: 'sander@x.be' }),
+    useProfile: () => {
+      live()
+      return store.profiel
+    },
     saveProfile: vi.fn(() => Promise.resolve()),
+    markRondje: vi.fn(() => {
+      store.profiel = { ...store.profiel, rondje: true }
+      listeners.forEach((l) => l())
+      return Promise.resolve()
+    }),
     useGroup: () => ({ naam: 'Chiro Elzestraat', iban: 'BE68 5390 0754 7034', begunstigde: 'Chiro Elzestraat vzw' }),
     saveGroup: vi.fn(() => Promise.resolve()),
     setRole: vi.fn(() => Promise.resolve()),
@@ -108,6 +121,7 @@ beforeEach(() => {
   store.entries = []
   store.guests = []
   store.mijnRol = 'lid'
+  store.profiel = { nick: 'Sander', naam: 'Sander V.', mail: 'sander@x.be', rondje: true }
   n = 0
   localStorage.clear()
   location.hash = ''
@@ -357,4 +371,29 @@ test('een scherm zonder rol krijgt gewoon de titel, geen badge', () => {
 
   expect(screen.getByText('Betalen')).toBeTruthy()
   expect(screen.queryByText('DRANKLEIDER')).toBeNull()
+})
+
+// TASK-12: het welkomstrondje in plaats van de lijst, op elke plek waar
+// profile.rondje het bepaalt.
+test('TASK-12 AC1: wie het rondje nog niet gehad heeft krijgt het meteen te zien, niet de lijst', () => {
+  store.profiel.rondje = false
+  render(<Lijst user={me} />)
+
+  expect(screen.getByText(/Welkom/)).toBeTruthy()
+  expect(screen.queryByText('Streepkeslijst')).toBeNull()
+})
+
+test('TASK-12 AC1: wie het rondje al gehad heeft komt meteen op de lijst', () => {
+  store.profiel.rondje = true
+  render(<Lijst user={me} />)
+
+  expect(screen.getByText('Streepkeslijst')).toBeTruthy()
+})
+
+test('TASK-12 AC8: #/rondje opent het rondje ook al is het al gezien, zo werkt de herstart-link op Mijn profiel', () => {
+  store.profiel.rondje = true
+  location.hash = '#/rondje'
+  render(<Lijst user={me} />)
+
+  expect(screen.getByText(/Welkom/)).toBeTruthy()
 })

@@ -2,8 +2,13 @@ import { expect, test } from 'vitest'
 import { hashVanScherm, schermVanHash } from './route'
 
 test('elk scherm heeft een slug en komt er ook weer uit', () => {
-  for (const scherm of ['Periode afsluiten', 'Beheer', 'Mijn profiel', 'Betalen', 'Inningen', 'Meldingen'])
+  for (const scherm of ['Periode afsluiten', 'Beheer', 'Mijn profiel', 'Betalen', 'Inningen', 'Meldingen', 'Hoe werkt het'])
     expect(schermVanHash(hashVanScherm(scherm))).toBe(scherm)
+})
+
+test('TASK-12: het welkomstrondje heeft zijn eigen hash, zodat een refresh erop blijft staan', () => {
+  expect(hashVanScherm('Hoe werkt het')).toBe('#/rondje')
+  expect(schermVanHash('#/rondje')).toBe('Hoe werkt het')
 })
 
 test('de lijst is de app zonder hash', () => {

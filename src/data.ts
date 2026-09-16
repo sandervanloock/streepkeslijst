@@ -308,21 +308,27 @@ export const addGuest = (periodId: string, nick: string, naam: string, mail: str
     at: serverTimestamp(),
   })
 
-/** users/{uid}, live: the extra fields (mail) that Person/usePeople doesn't carry (TASK-5). */
+/** users/{uid}, live: the extra fields (mail) that Person/usePeople doesn't carry (TASK-5),
+ *  plus `rondje` (TASK-12): has this person had the Welkomstrondje, default false so every
+ *  user document written before this task still gates the round on first read. */
 export function useProfile(uid: string) {
-  const [profile, setProfile] = useState<{ nick: string; naam: string; mail: string }>()
+  const [profile, setProfile] = useState<{ nick: string; naam: string; mail: string; rondje: boolean }>()
 
   useEffect(
     () =>
       onSnapshot(doc(db, 'users', uid), (snap) => {
         const data = snap.data()
-        setProfile({ nick: data?.nick ?? '', naam: data?.name ?? '', mail: data?.mail ?? '' })
+        setProfile({ nick: data?.nick ?? '', naam: data?.name ?? '', mail: data?.mail ?? '', rondje: data?.rondje ?? false })
       }),
     [uid],
   )
 
   return profile
 }
+
+/** Set both by finishing the Welkomstrondje and by skipping it — skipping is a
+ *  decision, not a postponement, so it gates the round exactly like finishing does. */
+export const markRondje = (uid: string) => setDoc(doc(db, 'users', uid), { rondje: true }, { merge: true })
 
 /** The payout address is `mail`, deliberately not `email`: `email` is the Google account
  *  identity that userDoc() refreshes on every login, so storing a hand-picked address

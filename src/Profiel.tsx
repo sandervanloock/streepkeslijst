@@ -103,6 +103,13 @@ export function Profiel({ user, people, period, onToast }: { user: User; people:
           Bewaren
         </div>
       </div>
+
+      {/* TASK-12: getting back into the Welkomstrondje — deliberately a subtle
+          text link, not a button and not a menu entry. A plain anchor: useScherm
+          already listens on hashchange, so no callback needs threading down here. */}
+      <a href="#/rondje" style={{ display: 'block', marginTop: 14, font: '400 10.5px/1.5 "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.45)', textDecoration: 'none' }}>
+        Welkomstrondje nog eens bekijken
+      </a>
     </div>
   )
 }

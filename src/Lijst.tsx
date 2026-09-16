@@ -11,16 +11,18 @@ import {
   useGroup,
   usePeople,
   usePeriodes,
+  useProfile,
 } from './data'
 import type { Rol } from './data'
 import { actievePeriode, euro, magRol, totals } from './period'
-import { tally } from './tally'
+import { HOLD_MS, tally, useKlik } from './tally'
 import { signOut } from './auth'
 import { Profiel } from './Profiel'
 import { Beheer } from './Beheer'
 import { Afsluiten } from './Afsluiten'
 import { Betalen } from './Betalen'
 import { Inningen } from './Inningen'
+import { Rondje } from './Rondje'
 import { useScherm } from './route'
 
 // Small building blocks shared by the two bottom sheets and the side panel
@@ -32,47 +34,12 @@ const amber = '#F0A32B'
 const red = '#E4483A'
 const purple = '#7A4BD1'
 
-const HOLD_MS = 620
-
 /** The header line. The title keeps the design's 26px, but its line box is the
  *  chip's full height, so the two are exactly the same height and the text sits
  *  dead centre against the button — Anton's high cap height makes plain
  *  align-items:center look a notch too high. */
 const KOPHOOGTE = 44
 const KOPFONT = 26
-
-/** Design lines 958-974: a WebAudio noise burst + a vibrate, gated by the sound toggle. */
-function useKlik(geluid: boolean) {
-  const acRef = useRef<AudioContext | undefined>(undefined)
-  return (soort: 'streep' | 'bak') => {
-    if (!geluid) return
-    try {
-      if (!acRef.current) acRef.current = new AudioContext()
-      const ac = acRef.current
-      const t = ac.currentTime
-      const dur = soort === 'bak' ? 0.26 : 0.07
-      const buf = ac.createBuffer(1, Math.ceil(ac.sampleRate * dur), ac.sampleRate)
-      const d = buf.getChannelData(0)
-      for (let i = 0; i < d.length; i++)
-        d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, soort === 'bak' ? 1.4 : 2.6)
-      const src = ac.createBufferSource()
-      src.buffer = buf
-      const bp = ac.createBiquadFilter()
-      bp.type = 'bandpass'
-      bp.frequency.value = soort === 'bak' ? 900 : 2400
-      bp.Q.value = soort === 'bak' ? 1.1 : 2.4
-      const g = ac.createGain()
-      g.gain.value = soort === 'bak' ? 0.4 : 0.22
-      src.connect(bp)
-      bp.connect(g)
-      g.connect(ac.destination)
-      src.start(t)
-    } catch {
-      // ponytail: best-effort sound, a blocked/missing AudioContext just stays silent
-    }
-    if (navigator.vibrate) navigator.vibrate(soort === 'bak' ? [14, 40, 22] : 11)
-  }
-}
 
 /** The avatar + hamburger chip. Every screen carries it (design lines 271-280):
  *  the menu is the only way between screens, so there is no back arrow anywhere. */
@@ -129,6 +96,7 @@ export function Lijst({ user }: { user: User }) {
   const people = usePeople(pid)
   const entries = useEntries(pid)
   const tot = totals(entries)
+  const profile = useProfile(user.uid)
 
   const [correctie, setCorrectie] = useState(false)
   const [geluid, setGeluid] = useState(() => localStorage.getItem('geluid') !== 'uit')
@@ -173,6 +141,23 @@ export function Lijst({ user }: { user: User }) {
       setTimeout(() => setSnackFade(true), 4200),
       setTimeout(() => setSnack(undefined), 4500),
     ]
+  }
+
+  // TASK-12: a leader who hasn't had the Welkomstrondje yet gets it instead of
+  // the lijst — both on a genuine first login (profile.rondje still false) and
+  // whenever the subtle restart link on Mijn profiel sets the scherm to it.
+  // Deliberately not gated on period/pid being ready: profile.rondje resolves
+  // independently, and Rondje fetches its own period/people via data.ts.
+  if (profile && (!profile.rondje || scherm === 'Hoe werkt het')) {
+    return (
+      <Rondje
+        user={user}
+        onKlaar={(msg) => {
+          setScherm(undefined)
+          if (msg) zegSnack(undefined, msg, lime)
+        }}
+      />
+    )
   }
 
   if (!period || !pid) return null

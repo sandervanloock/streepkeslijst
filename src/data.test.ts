@@ -5,6 +5,7 @@ import {
   addGuest,
   addStreep,
   herroepBetaling,
+  markRondje,
   meldBetaling,
   removeOne,
   saveGroup,
@@ -135,12 +136,20 @@ test('een gast hoort bij één periode', async () => {
   ])
 })
 
-test('useProfile leest users/{uid} en volgt wijzigingen', () => {
+test('useProfile leest users/{uid} en volgt wijzigingen, rondje default false', () => {
   const { result } = renderHook(() => useProfile('u1'))
   expect(result.current).toBeUndefined()
 
   act(() => emit!({ data: () => ({ nick: 'Wollie', name: 'Wout D.', mail: 'w@x.be' }) }))
-  expect(result.current).toEqual({ nick: 'Wollie', naam: 'Wout D.', mail: 'w@x.be' })
+  expect(result.current).toEqual({ nick: 'Wollie', naam: 'Wout D.', mail: 'w@x.be', rondje: false })
+
+  act(() => emit!({ data: () => ({ nick: 'Wollie', name: 'Wout D.', mail: 'w@x.be', rondje: true }) }))
+  expect(result.current?.rondje).toBe(true)
+})
+
+test('markRondje zet alleen rondje, de rest van het profiel blijft staan', async () => {
+  await markRondje('u1')
+  expect(calls.set).toEqual([['users/u1', { rondje: true }]])
 })
 
 test('saveProfile schrijft nick, naam en mail naar users/{uid} zonder de rest te overschrijven', async () => {
