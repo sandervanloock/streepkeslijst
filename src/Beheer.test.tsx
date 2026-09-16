@@ -16,7 +16,6 @@ const calls = {
   shared: [] as string[],
 }
 let invitesLijst: { id: string; email: string; by: string; byNick: string; herinnerd: number }[] = []
-let shareResultaat: 'gedeeld' | 'gekopieerd' = 'gedeeld'
 
 vi.mock('./data', () => ({
   setRole: (uid: string, role: string) => {
@@ -41,10 +40,7 @@ vi.mock('./data', () => ({
     calls.revoked.push(email)
     return Promise.resolve()
   },
-  shareInvite: (email: string) => {
-    calls.shared.push(email)
-    return Promise.resolve(shareResultaat)
-  },
+  shareInvite: (emails: string[]) => calls.shared.push(...emails),
 }))
 
 const ik = { uid: 'u1' } as User
@@ -80,7 +76,6 @@ beforeEach(() => {
   calls.revoked = []
   calls.shared = []
   invitesLijst = []
-  shareResultaat = 'gedeeld'
 })
 
 afterEach(cleanup)
@@ -194,34 +189,26 @@ test('AC8: met twee beheerders mag er wel één weg', () => {
   expect(calls.roles).toEqual([['u1', 'lid']])
 })
 
-test('AC1 + AC4: een geldig adres maakt een uitnodiging en deelt ze via navigator.share', async () => {
+const veld = () => screen.getByPlaceholderText(/voornaam@mail\.be/)
+
+test('AC1 + AC4: een geldig adres maakt een uitnodiging en opent de mail', async () => {
   const onToast = toon()
 
-  fireEvent.change(screen.getByPlaceholderText('voornaam@mail.be'), { target: { value: 'Wollie@Mail.be' } })
-  await act(async () => void fireEvent.click(screen.getByText('Deel de uitnodiging')))
+  fireEvent.change(veld(), { target: { value: 'Wollie@Mail.be' } })
+  await act(async () => void fireEvent.click(screen.getByText('Registreer de uitnodiging(en)')))
 
   expect(calls.created).toEqual(['wollie@mail.be']) // getrimd en lowercased
   expect(calls.shared).toEqual(['wollie@mail.be'])
-  expect(onToast).toHaveBeenCalledWith('Uitnodiging voor wollie@mail.be klaar · deel ze met hem')
-})
-
-test('AC4: zonder navigator.share valt het terug op de klembord-toast', async () => {
-  shareResultaat = 'gekopieerd'
-  const onToast = toon()
-
-  fireEvent.change(screen.getByPlaceholderText('voornaam@mail.be'), { target: { value: 'wollie@mail.be' } })
-  await act(async () => void fireEvent.click(screen.getByText('Deel de uitnodiging')))
-
-  expect(onToast).toHaveBeenCalledWith('Uitnodiging gekopieerd · plak ze in WhatsApp')
+  expect(onToast).toHaveBeenCalledWith('wollie@mail.be geregistreerd · mail staat klaar')
 })
 
 test('AC2: een ongeldig adres wordt inline geweigerd, er wordt niets aangemaakt', async () => {
   toon()
 
-  fireEvent.change(screen.getByPlaceholderText('voornaam@mail.be'), { target: { value: 'niet-een-mailadres' } })
-  await act(async () => void fireEvent.click(screen.getByText('Deel de uitnodiging')))
+  fireEvent.change(veld(), { target: { value: 'niet-een-mailadres' } })
+  await act(async () => void fireEvent.click(screen.getByText('Registreer de uitnodiging(en)')))
 
-  expect(screen.getByText('Geef een geldig e-mailadres.')).toBeTruthy()
+  expect(screen.getByText('Geen geldig e-mailadres: niet-een-mailadres')).toBeTruthy()
   expect(calls.created).toEqual([])
 })
 
@@ -229,10 +216,10 @@ test('AC3: een al uitgenodigd adres wordt geweigerd en verwijst naar opnieuw del
   invitesLijst = [{ id: 'wollie@mail.be', email: 'wollie@mail.be', by: 'u1', byNick: 'Sander', herinnerd: 0 }]
   toon()
 
-  fireEvent.change(screen.getByPlaceholderText('voornaam@mail.be'), { target: { value: 'wollie@mail.be' } })
-  await act(async () => void fireEvent.click(screen.getByText('Deel de uitnodiging')))
+  fireEvent.change(veld(), { target: { value: 'wollie@mail.be' } })
+  await act(async () => void fireEvent.click(screen.getByText('Registreer de uitnodiging(en)')))
 
-  expect(screen.getByText('Die is al uitgenodigd — deel de uitnodiging opnieuw hieronder.')).toBeTruthy()
+  expect(screen.getByText('Al uitgenodigd: wollie@mail.be — mail die uitnodiging opnieuw hieronder.')).toBeTruthy()
   expect(calls.created).toEqual([])
 })
 
@@ -243,15 +230,15 @@ test('AC5: opnieuw delen verhoogt de herinnering en de badge staat op HERINNERD'
   expect(screen.getByText('HERINNERD')).toBeTruthy()
 })
 
-test('AC5: op de knop drukken deelt opnieuw en bumpt de teller', async () => {
+test('AC5: op de knop drukken mailt en bumpt de teller', async () => {
   invitesLijst = [{ id: 'wollie@mail.be', email: 'wollie@mail.be', by: 'u1', byNick: 'Sander', herinnerd: 0 }]
   const onToast = toon()
 
-  await act(async () => void fireEvent.click(screen.getByText('Opnieuw delen')))
+  await act(async () => void fireEvent.click(screen.getByText('Mail de uitnodiging')))
 
   expect(calls.bumped).toEqual(['wollie@mail.be'])
   expect(calls.shared).toEqual(['wollie@mail.be'])
-  expect(onToast).toHaveBeenCalledWith('Uitnodiging voor wollie@mail.be opnieuw gedeeld')
+  expect(onToast).toHaveBeenCalledWith('Mail voor wollie@mail.be staat klaar · verstuur ze')
 })
 
 test('AC6: intrekken verwijdert de uitnodiging', async () => {
@@ -262,4 +249,15 @@ test('AC6: intrekken verwijdert de uitnodiging', async () => {
 
   expect(calls.revoked).toEqual(['wollie@mail.be'])
   expect(onToast).toHaveBeenCalledWith('Uitnodiging voor wollie@mail.be ingetrokken · hij kan niet meer aansluiten')
+})
+
+test('meerdere adressen op aparte lijnen worden in één keer uitgenodigd', async () => {
+  const onToast = toon()
+
+  fireEvent.change(veld(), { target: { value: ' Wollie@Mail.be \n\nanton@mail.be, fien@mail.be;\nwollie@mail.be' } })
+  await act(async () => void fireEvent.click(screen.getByText('Registreer de uitnodiging(en)')))
+
+  expect(calls.created).toEqual(['wollie@mail.be', 'anton@mail.be', 'fien@mail.be']) // lijn, komma of puntkomma; getrimd, lowercased, ontdubbeld
+  expect(calls.shared).toEqual([]) // een bulk registreert alleen, mailen gebeurt per persoon
+  expect(onToast).toHaveBeenCalledWith('3 uitnodigingen geregistreerd · mail ze één voor één hieronder')
 })

@@ -359,22 +359,25 @@ export const bumpInvite = (email: string) =>
 
 export const revokeInvite = (email: string) => deleteDoc(doc(db, 'invites', email))
 
-/** Builds the Dutch invitation text and hands it to the Web Share API (one tap
- *  into WhatsApp on mobile), falling back to a clipboard copy on a browser
- *  without navigator.share (desktop Firefox). The invite doc already exists
- *  either way — this is only the beheerder's own reminder text, never a claim
- *  that the invitee was notified (TASK-7 AC4). */
-export async function shareInvite(email: string, groupNaam: string): Promise<'gedeeld' | 'gekopieerd'> {
-  const tekst = `Je bent uitgenodigd voor de streepjeslijst van ${groupNaam}. Meld je aan met Google op ${email} — ${location.origin}`
-  if (navigator.share) {
-    try {
-      await navigator.share({ text: tekst })
-    } catch (e) {
-      // De gebruiker sloot het deelvenster — het uitnodigingsdoc blijft gewoon staan.
-      if (!(e instanceof Error && e.name === 'AbortError')) throw e
-    }
-    return 'gedeeld'
-  }
-  await navigator.clipboard.writeText(tekst)
-  return 'gekopieerd'
+/** Opens a prefilled mail draft addressed to the invitees: mailto: is the only
+ *  channel that carries both a recipient and a subject (navigator.share drops
+ *  both, TASK-7's share sheet pasted the title into the body). The invite doc
+ *  already exists — sending stays the beheerder's own act, never a claim that
+ *  the invitee was notified (TASK-7 AC4). */
+export function shareInvite(emails: string[], groupNaam: string): void {
+  const onderwerp = `Uitnodiging voor de streepjeslijst van ${groupNaam}`
+  const aanmelden = emails.length === 1 ? `Google op ${emails[0]}` : 'Google op het adres waarop je deze mail kreeg'
+  // Een mailto-body is altijd platte tekst — een echte <a> kan niet. De link
+  // staat daarom alleen op zijn lijn, dan maakt elke mailclient er zelf een
+  // klikbare link van.
+  const tekst = `Dag!
+
+Je bent uitgenodigd voor de streepjeslijst van ${groupNaam}.
+
+${location.origin}
+
+Meld je daar aan met ${aanmelden} — dan sta je meteen op de lijst.
+
+Tot de volgende!`
+  location.href = `mailto:${emails.map(encodeURIComponent).join(',')}?subject=${encodeURIComponent(onderwerp)}&body=${encodeURIComponent(tekst)}`
 }

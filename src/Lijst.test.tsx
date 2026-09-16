@@ -71,7 +71,7 @@ vi.mock('./data', async () => {
     createInvite: vi.fn(() => Promise.resolve()),
     bumpInvite: vi.fn(() => Promise.resolve()),
     revokeInvite: vi.fn(() => Promise.resolve()),
-    shareInvite: vi.fn(() => Promise.resolve('gedeeld')),
+    shareInvite: vi.fn(),
     sluitPeriode: vi.fn(() => Promise.resolve()),
     // Betalen (TASK-9): no closed period yet in these lijst-level tests, so it
     // renders its own "niets openstaand" fallback — Betalen.test.tsx covers the rest.

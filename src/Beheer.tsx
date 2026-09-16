@@ -7,10 +7,11 @@ import { geldigeMail, kort, magRolWijzigen } from './period'
 // Ported from design/"Streepkeslijst App.dc.html", the beheerOpen block
 // (lines 175-265), Dutch copy verbatim except for the invite sections, which
 // are written around mail — the delivery decision changed (see TASK-7's plan):
-// no mail is sent, the beheerder shares the invite through navigator.share
-// instead. Substitutions: 'Mail de uitnodiging' -> 'Deel de uitnodiging',
-// 'GEMAILD, NOG NIET AANGESLOTEN' -> 'UITGENODIGD, NOG NIET AANGESLOTEN',
-// badge GEMAILD -> UITGENODIGD, 'Opnieuw mailen' -> 'Opnieuw delen'. The
+// no mail is sent from a server, the beheerder sends it himself from a
+// prefilled mailto: draft (navigator.share dropped both recipient and
+// subject), and may paste several addresses at once (one per line).
+// Substitutions: 'GEMAILD, NOG NIET AANGESLOTEN' -> 'UITGENODIGD, NOG NIET
+// AANGESLOTEN', badge GEMAILD -> UITGENODIGD. The
 // heading and the BEHEERDER badge belong to the shared header row in
 // Lijst.tsx, which keeps them on the menu chip's line on every screen.
 // TASK-9 adds a REKENING block under DE GROEP: the design has state for
@@ -74,30 +75,36 @@ export function Beheer({
   }
 
   const stuurUitnodiging = async () => {
-    const mail = uitContact.trim().toLowerCase()
-    if (!geldigeMail(mail)) {
-      setUitFout('Geef een geldig e-mailadres.')
+    // Eén adres per lijn of komma-gescheiden — zo nodigt de beheerder een hele
+    // ploeg in één keer uit, ook als ze uit een mailclient geplakt komen.
+    const mails = [...new Set(uitContact.split(/[\n,;]/).map((r) => r.trim().toLowerCase()).filter(Boolean))]
+    const fout = mails.filter((m) => !geldigeMail(m))
+    if (!mails.length || fout.length) {
+      setUitFout(fout.length ? `Geen geldig e-mailadres: ${fout.join(', ')}` : 'Geef een geldig e-mailadres.')
       return
     }
-    if (invites.some((u) => u.id === mail)) {
-      setUitFout('Die is al uitgenodigd — deel de uitnodiging opnieuw hieronder.')
+    const dubbel = mails.filter((m) => invites.some((u) => u.id === m))
+    if (dubbel.length) {
+      setUitFout(`Al uitgenodigd: ${dubbel.join(', ')} — mail die uitnodiging opnieuw hieronder.`)
       return
     }
     setUitFout(undefined)
-    await createInvite(mail, user.uid, ik?.nick ?? '?')
+    for (const mail of mails) await createInvite(mail, user.uid, ik?.nick ?? '?')
     setUitContact('')
-    const resultaat = await shareInvite(mail, group.naam)
-    onToast(
-      resultaat === 'gedeeld'
-        ? `Uitnodiging voor ${mail} klaar · deel ze met hem`
-        : 'Uitnodiging gekopieerd · plak ze in WhatsApp',
-    )
+    // Eén adres mailt meteen door — bij een bulk blijft het bij registreren, één
+    // mailto met alle adressen erin is geen persoonlijke uitnodiging.
+    if (mails.length === 1) {
+      shareInvite(mails, group.naam)
+      onToast(`${mails[0]} geregistreerd · mail staat klaar`)
+      return
+    }
+    onToast(`${mails.length} uitnodigingen geregistreerd · mail ze één voor één hieronder`)
   }
 
-  const opnieuwDelen = async (u: Invite & { id: string }) => {
+  const mailOpnieuw = async (u: Invite & { id: string }) => {
     await bumpInvite(u.id)
-    await shareInvite(u.id, group.naam)
-    onToast(`Uitnodiging voor ${u.id} opnieuw gedeeld`)
+    shareInvite([u.id], group.naam)
+    onToast(`Mail voor ${u.id} staat klaar · verstuur ze`)
   }
 
   const trekIn = async (u: Invite & { id: string }) => {
@@ -168,21 +175,21 @@ export function Beheer({
       <div style={{ borderRadius: 12, background: '#1B1D17', border: '1px solid rgba(244,241,230,.12)', padding: 16 }}>
         <div style={{ font: '400 11.5px/1.55 "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.6)', marginBottom: 14 }}>
           Een uitnodiging is de enige manier om erbij te komen. Ze melden zich aan met Google — <strong style={{ color: paper }}>gebruik het adres van hun Google-account</strong>, anders
-          vindt de uitnodiging hen niet.
+          vindt de uitnodiging hen niet. Registreer ze hier — daarna mail je elke uitnodiging hieronder.
         </div>
         <div style={{ background: 'rgba(244,241,230,.06)', border: `1px solid ${uitFout ? red : 'rgba(244,241,230,.12)'}`, borderRadius: 10, padding: '11px 13px' }}>
-          <div style={veldKopje}>E-MAILADRES</div>
-          <input
+          <div style={veldKopje}>E-MAILADRES(SEN) · PER LIJN OF KOMMA</div>
+          <textarea
             value={uitContact}
             onChange={(e) => {
               setUitContact(e.target.value)
               setUitFout(undefined)
             }}
-            type="email"
+            rows={Math.min(6, uitContact.split('\n').length + 1)}
             inputMode="email"
             autoCapitalize="none"
-            placeholder="voornaam@mail.be"
-            style={{ width: '100%', marginTop: 5, background: 'transparent', border: 'none', outline: 'none', color: paper, font: '500 15px "Space Grotesk",sans-serif' }}
+            placeholder={'voornaam@mail.be\nandere@mail.be'}
+            style={{ width: '100%', marginTop: 5, background: 'transparent', border: 'none', outline: 'none', resize: 'none', color: paper, font: '500 15px/1.5 "Space Grotesk",sans-serif' }}
           />
         </div>
         {uitFout && (
@@ -194,7 +201,7 @@ export function Beheer({
           onClick={stuurUitnodiging}
           style={{ marginTop: 10, padding: 14, borderRadius: 9, background: lime, color: '#121310', textAlign: 'center', font: '400 15px/1 Anton,sans-serif', letterSpacing: '.04em', textTransform: 'uppercase', cursor: 'pointer' }}
         >
-          Deel de uitnodiging
+          Registreer de uitnodiging(en)
         </div>
       </div>
 
@@ -230,10 +237,10 @@ export function Beheer({
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 11 }}>
                 <div
-                  onClick={() => opnieuwDelen(u)}
+                  onClick={() => mailOpnieuw(u)}
                   style={{ flex: 1, textAlign: 'center', padding: 10, borderRadius: 8, border: '1px solid rgba(244,241,230,.18)', font: '500 11px "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.72)', cursor: 'pointer' }}
                 >
-                  Opnieuw delen
+                  {herinnerd ? 'Opnieuw mailen' : 'Mail de uitnodiging'}
                 </div>
                 <div
                   onClick={() => trekIn(u)}
