@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { actievePeriode, bedrag, dagLabel, dagNa, euro, euroTotaal, fuifDag, geldigeMail, logboek, magRol, magRolWijzigen, mededeling, totals } from './period'
+import { actievePeriode, bedrag, dagLabel, dagNa, euro, euroTotaal, fuifDag, geldigeMail, logboek, magRol, magRolWijzigen, mededeling, meldingId, totals } from './period'
 import type { Entry } from './period'
 
 test('groups entries per person and per kind', () => {
@@ -148,6 +148,23 @@ test('AC10: fuifDag legt de daggrens op 06:00, niet op middernacht', () => {
   expect(fuifDag(new Date('2026-09-18T00:10:00'))).toBe('2026-09-17')
   expect(fuifDag(new Date('2026-09-18T05:59:00'))).toBe('2026-09-17')
   expect(fuifDag(new Date('2026-09-18T06:00:00'))).toBe('2026-09-18')
+})
+
+test('TASK-15 AC4/AC6: meldingId dedupliceert binnen dezelfde fuif-avond, op de 06:00-rand', () => {
+  const laat = meldingId('u1', new Date('2026-09-17T23:50:00'))
+  const vroeg = meldingId('u1', new Date('2026-09-18T00:10:00'))
+  const opDeGrens = meldingId('u1', new Date('2026-09-18T05:59:00'))
+  const nieuweAvond = meldingId('u1', new Date('2026-09-18T06:00:00'))
+
+  expect(laat).toBe(vroeg)
+  expect(laat).toBe(opDeGrens)
+  expect(laat).not.toBe(nieuweAvond)
+})
+
+test('TASK-15 AC4: twee verschillende strepers dezelfde avond geven twee aparte meldingIds', () => {
+  const van1 = meldingId('u1', new Date('2026-09-17T23:50:00'))
+  const van2 = meldingId('u2', new Date('2026-09-17T23:50:00'))
+  expect(van1).not.toBe(van2)
 })
 
 test('AC9: logboek groepeert per dag (nieuwste eerst) en somt het netto per dag, negatieve deltas incluis', () => {

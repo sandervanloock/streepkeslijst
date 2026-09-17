@@ -48,7 +48,33 @@ service cloud.firestore {
     // readAt timestamp on users/{uid} (that doc's own update rule) instead.
     match /users/{uid}/notifications/{id} {
       allow read: if request.auth.uid == uid;
-      allow create: if isDrankleider();
+      allow create: if isDrankleider()
+        // TASK-15: the one melding kind an ordinary member may create for
+        // someone else — "iemand streepte voor jou" has to reach the
+        // recipient even when the streper has no role above 'lid'. Every
+        // clause below is a lock, not a convenience: the writer must be the
+        // signed-in user themselves (their own nick, not a made-up one), the
+        // text and meta must be exactly the fixed strings the app writes (no
+        // amount, no free text), `at` must be request.time (no backdating),
+        // and the id must be shaped 'voor-jou-<date>-<their own uid>' (nobody
+        // else's uid, no other kind hiding behind this arm). A member can
+        // therefore only ever send "I struck for you", the same claim they
+        // could truthfully make anyway — and it would show up in the ledger
+        // regardless. Free text to arbitrary people is not possible.
+        || (isMember()
+          && request.resource.data.kind == 'voor-jou'
+          && request.resource.data.text == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.nick + ' zette streepjes op jouw naam'
+          && request.resource.data.meta == 'Aantal en tijdstip staan in je logboek.'
+          && request.resource.data.at == request.time
+          && id.matches('^voor-jou-[0-9]{4}-[0-9]{2}-[0-9]{2}-' + request.auth.uid + '$'));
+      // ponytail: the id's date part is shape-checked by regex, not verified
+      // against request.time — rules cannot recompute the app's local 06:00
+      // fuif-day boundary. Ceiling: a member with devtools can write one
+      // melding per made-up date, always with their own real nick in it.
+      // Upgrade path if that's ever too loose: a Cloud Function on entry
+      // create that writes the melding itself, with the create rule for
+      // members closed again — the same function also makes this kind
+      // pushable for TASK-14, which a client write cannot.
       allow update, delete: if false;
     }
 
