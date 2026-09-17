@@ -270,6 +270,17 @@ test('AC1: Mijn profiel in het menu opent het echte scherm, geen stub', async ()
   expect(screen.getByText('Zo staat je naam op de lijst en in de mededeling van je betaling.')).toBeTruthy()
 })
 
+test('TASK-16 AC1: Mijn logboek staat in het menu en opent het echte scherm', async () => {
+  store.mijnRol = 'lid'
+  render(<Lijst user={me} />)
+
+  await tik('user:u1') // een streep op eigen naam, zodat het logboek niet leeg is
+
+  fireEvent.click(screen.getAllByText('Sander')[0]) // het menu-chipje bovenaan
+  fireEvent.click(screen.getByText('Mijn logboek'))
+  expect(screen.getByText('zelf gezet')).toBeTruthy()
+})
+
 test('AC2: Beheer staat alleen in het menu voor een beheerder', () => {
   render(<Lijst user={me} />)
   fireEvent.click(screen.getAllByText('Sander')[0]) // het menu-chipje bovenaan

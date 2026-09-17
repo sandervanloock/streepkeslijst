@@ -25,6 +25,7 @@ import { Afsluiten } from './Afsluiten'
 import { Betalen } from './Betalen'
 import { Inningen } from './Inningen'
 import { Meldingen } from './Meldingen'
+import { Logboek } from './Logboek'
 import { Rondje } from './Rondje'
 import { useScherm } from './route'
 
@@ -270,6 +271,7 @@ export function Lijst({ user }: { user: User }) {
   const alleNav: { label: string; rol?: Rol; badge?: number }[] = [
     { label: 'De lijst' },
     { label: 'Mijn profiel' },
+    { label: 'Mijn logboek' },
     { label: 'Meldingen', badge: ongelezen || undefined },
     { label: 'Betalen' },
     { label: 'Inningen', rol: 'drankleider' },
@@ -331,6 +333,8 @@ export function Lijst({ user }: { user: User }) {
       </div>
       {open === 'Mijn profiel' ? (
         <Profiel user={user} people={people} period={period} onToast={toast} />
+      ) : open === 'Mijn logboek' ? (
+        <Logboek entries={entries} myRef={myRef} />
       ) : open === 'Meldingen' ? (
         <Meldingen nick={myNick} meldingen={meldingen} readAt={profile?.readAt} onGa={setScherm} onAllesGelezen={() => markGelezen(user.uid)} />
       ) : open === 'Beheer' ? (

@@ -254,13 +254,21 @@ export function usePeople(periodId: string | undefined) {
   return [...users, ...guests]
 }
 
+// TASK-16: `at` is a serverTimestamp() (data.ts's writeEntry) — still `null`
+// locally until the server confirms it, and then "now" is exactly right for
+// a moment that's ordering a logboek row, not a stored historical instant.
+const naarEntry = (d: { id: string; data: () => Record<string, unknown> }): Entry & { id: string } => {
+  const data = d.data() as Entry & { at?: { toDate: () => Date } | null }
+  return { id: d.id, ...data, at: data.at?.toDate() ?? new Date() }
+}
+
 export function useEntries(periodId: string | undefined) {
   const [entries, setEntries] = useState<(Entry & { id: string })[]>([])
 
   useEffect(() => {
     if (!periodId) return
     return onSnapshot(collection(db, 'periods', periodId, 'entries'), (snap) =>
-      setEntries(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Entry) }))),
+      setEntries(snap.docs.map(naarEntry)),
     )
   }, [periodId])
 
@@ -278,7 +286,7 @@ export function useOwnEntries(periodId: string | undefined, personRef: string) {
     if (!periodId) return
     return onSnapshot(
       query(collection(db, 'periods', periodId, 'entries'), where('personRef', '==', personRef)),
-      (snap) => setEntries(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Entry) }))),
+      (snap) => setEntries(snap.docs.map(naarEntry)),
     )
   }, [periodId, personRef])
 

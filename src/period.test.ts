@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { actievePeriode, bedrag, dagLabel, dagNa, euro, euroTotaal, geldigeMail, magRol, magRolWijzigen, mededeling, totals } from './period'
+import { actievePeriode, bedrag, dagLabel, dagNa, euro, euroTotaal, fuifDag, geldigeMail, logboek, magRol, magRolWijzigen, mededeling, totals } from './period'
 import type { Entry } from './period'
 
 test('groups entries per person and per kind', () => {
@@ -139,4 +139,53 @@ test('TASK-13: dagLabel zet een moment in vandaag/gisteren/eerder, op de klok va
   // terwijl het toestel al morgen aanwijst, en omgekeerd.
   const laat = new Date('2026-09-17T23:45:00')
   expect(dagLabel(laat, new Date('2026-09-18T01:00:00'))).toBe('gisteren')
+})
+
+// TASK-16 AC10: the fuif day boundary sits at 06:00 local, not midnight — a
+// party running from 23:50 to 00:10 must land under the same day heading.
+test('AC10: fuifDag legt de daggrens op 06:00, niet op middernacht', () => {
+  expect(fuifDag(new Date('2026-09-17T23:50:00'))).toBe('2026-09-17')
+  expect(fuifDag(new Date('2026-09-18T00:10:00'))).toBe('2026-09-17')
+  expect(fuifDag(new Date('2026-09-18T05:59:00'))).toBe('2026-09-17')
+  expect(fuifDag(new Date('2026-09-18T06:00:00'))).toBe('2026-09-18')
+})
+
+test('AC9: logboek groepeert per dag (nieuwste eerst) en somt het netto per dag, negatieve deltas incluis', () => {
+  const entries: Entry[] = [
+    { personRef: 'user:a', kind: 'streep', delta: 1, at: new Date('2026-09-16T20:00:00'), by: 'u2', byNick: 'Anton' },
+    { personRef: 'user:a', kind: 'streep', delta: -1, at: new Date('2026-09-16T21:00:00'), by: 'u2', byNick: 'Anton' },
+    { personRef: 'user:a', kind: 'streep', delta: 1, at: new Date('2026-09-17T20:00:00'), by: 'u1', byNick: 'Sander' },
+    { personRef: 'user:b', kind: 'streep', delta: 5, at: new Date('2026-09-17T20:00:00'), by: 'u1', byNick: 'Sander' },
+  ]
+  const dagen = logboek(entries, 'user:a')
+  expect(dagen.map((d) => d.dag)).toEqual(['2026-09-17', '2026-09-16'])
+  expect(dagen[0].netto).toBe(1)
+  expect(dagen[1].netto).toBe(0) // +1 en -1 op dezelfde dag
+  // andermans boekingen ('user:b') komen er nergens in dit resultaat
+  expect(logboek(entries, 'user:b')).toHaveLength(1)
+})
+
+test('AC4: binnen een uur samengevoegd per streper/soort/teken, een streep en een schrapping blijven twee regels', () => {
+  const entries: Entry[] = [
+    { personRef: 'user:a', kind: 'streep', delta: 1, at: new Date('2026-09-17T20:05:00'), by: 'u2', byNick: 'Anton' },
+    { personRef: 'user:a', kind: 'streep', delta: 1, at: new Date('2026-09-17T20:45:00'), by: 'u2', byNick: 'Anton' },
+    { personRef: 'user:a', kind: 'streep', delta: -1, at: new Date('2026-09-17T20:50:00'), by: 'u2', byNick: 'Anton' },
+  ]
+  const [dag] = logboek(entries, 'user:a')
+  expect(dag.regels).toHaveLength(2)
+  const streep = dag.regels.find((r) => r.n > 0)!
+  const schrap = dag.regels.find((r) => r.n < 0)!
+  expect(streep).toMatchObject({ uur: 20, n: 2, keer: 2, byNick: 'Anton' })
+  expect(schrap).toMatchObject({ uur: 20, n: -1, keer: 1 })
+  expect(dag.netto).toBe(1)
+})
+
+test('AC3: bakken telt apart mee in de dag-meta', () => {
+  const entries: Entry[] = [
+    { personRef: 'user:a', kind: 'bak', delta: 1, at: new Date('2026-09-17T20:00:00'), by: 'u1', byNick: 'Sander' },
+    { personRef: 'user:a', kind: 'streep', delta: 3, at: new Date('2026-09-17T21:00:00'), by: 'u1', byNick: 'Sander' },
+  ]
+  const [dag] = logboek(entries, 'user:a')
+  expect(dag.netto).toBe(3)
+  expect(dag.bakken).toBe(1)
 })

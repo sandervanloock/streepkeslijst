@@ -2,7 +2,7 @@ import { expect, test } from 'vitest'
 import { hashVanScherm, schermVanHash } from './route'
 
 test('elk scherm heeft een slug en komt er ook weer uit', () => {
-  for (const scherm of ['Periode afsluiten', 'Beheer', 'Mijn profiel', 'Betalen', 'Inningen', 'Meldingen', 'Hoe werkt het'])
+  for (const scherm of ['Periode afsluiten', 'Beheer', 'Mijn profiel', 'Mijn logboek', 'Betalen', 'Inningen', 'Meldingen', 'Hoe werkt het'])
     expect(schermVanHash(hashVanScherm(scherm))).toBe(scherm)
 })
 

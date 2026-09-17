@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react'
  */
 const schermen: Record<string, string> = {
   profiel: 'Mijn profiel',
+  logboek: 'Mijn logboek',
   meldingen: 'Meldingen',
   betalen: 'Betalen',
   inningen: 'Inningen',

@@ -110,8 +110,10 @@ test('useEntries leest de periode-boekingen en volgt wat anderen erbij schrijven
     emit!({ docs: [{ id: 'e1', data: () => ({ personRef: 'user:u2', kind: 'streep', delta: 1, byNick: 'Wollie' }) }] }),
   )
 
+  // TASK-16: `at` is added from the (missing, here) serverTimestamp — falls
+  // back to "now" until the server confirms it, so it's a Date, not a fixed value.
   expect(result.current).toEqual([
-    { id: 'e1', personRef: 'user:u2', kind: 'streep', delta: 1, byNick: 'Wollie' },
+    { id: 'e1', personRef: 'user:u2', kind: 'streep', delta: 1, byNick: 'Wollie', at: expect.any(Date) },
   ])
 })
 
@@ -297,7 +299,7 @@ test('TASK-10 AC5: useOwnEntries filtert de periode-boekingen op personRef', () 
       docs: [{ id: 'e1', data: () => ({ personRef: 'user:u1', kind: 'streep', delta: 3 }) }],
     }),
   )
-  expect(result.current).toEqual([{ id: 'e1', personRef: 'user:u1', kind: 'streep', delta: 3 }])
+  expect(result.current).toEqual([{ id: 'e1', personRef: 'user:u1', kind: 'streep', delta: 3, at: expect.any(Date) }])
 })
 
 test('TASK-10 AC3: sluitPeriode schrijft in één batch de einddatum op de sluitende periode en de nieuwe periode erna, zonder totals', async () => {

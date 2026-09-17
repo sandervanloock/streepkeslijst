@@ -7,10 +7,10 @@
 </head>
 <body>
 <x-dc>
-<helmet data-dc-atomics>
+<helmet data-dc-atomics="">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Anton&amp;family=Space+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
 <style>
 body{margin:0;background:#E8E4D9;font-family:'Space Grotesk',system-ui,sans-serif}
 a{color:#121310}a:hover{color:#000}
@@ -105,6 +105,9 @@ a{color:#121310}a:hover{color:#000}
                 <sc-if value="{{ p.heeftBak }}" hint-placeholder-val="{{ false }}">
                   <div style="margin-top:6px;font:400 12px/1 Anton,sans-serif;letter-spacing:.05em;color:#F0A32B">{{ p.bakTotaal }}</div>
                 </sc-if>
+                <sc-if value="{{ p.isMij }}" hint-placeholder-val="{{ false }}">
+                  <div onClick="{{ p.openAudit }}" onPointerDown="{{ p.stop }}" onPointerUp="{{ p.stop }}" style="margin-top:8px;display:inline-flex;align-items:center;gap:5px;padding:6px 0 2px;cursor:pointer;font:400 9.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;color:#D8F651;border-bottom:1px solid rgba(216,246,81,.4)" style-active="color:#F4F1E6">LOGBOEK <span style="font-family:'Space Grotesk',sans-serif;letter-spacing:0">→</span></div>
+                </sc-if>
               </div>
               <sc-if value="{{ correctie }}" hint-placeholder-val="{{ false }}">
                 <div style="flex:none;width:26px;height:26px;border-radius:99px;border:1px solid #E4483A;color:#E4483A;display:grid;place-items:center;font:400 15px/1 Anton,sans-serif;opacity:{{ p.kanSchrappen }}">–</div>
@@ -124,6 +127,63 @@ a{color:#121310}a:hover{color:#000}
         </div>
         </div>
       </sc-if>
+
+        <sc-if value="{{ auditOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:58px 0 34px">
+            <div style="padding:0 18px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div onClick="{{ sluitAudit }}" style="width:44px;height:44px;border-radius:99px;background:rgba(244,241,230,.08);display:grid;place-items:center;font:400 17px/1 Anton,sans-serif;color:#F4F1E6;cursor:pointer;flex:none">←</div>
+                <span style="font:400 9px/1 Anton,sans-serif;letter-spacing:.1em;color:#121310;background:#D8F651;padding:4px 5px;border-radius:2px;flex:none">LOGBOEK</span>
+                <div style="flex:1"></div>
+                <span style="font:400 10px ui-monospace,monospace;color:rgba(244,241,230,.45);flex:none">{{ auditPeriode }}</span>
+              </div>
+              <h2 style="margin:11px 0 0;font:400 38px/0.92 Anton,sans-serif;color:#F4F1E6;text-transform:uppercase">{{ auditTitel }}</h2>
+              <div style="font:400 11.5px/1.5 'Space Grotesk',sans-serif;color:rgba(244,241,230,.5);margin-top:7px">{{ auditIntro }}</div>
+            </div>
+
+            <div style="display:flex;gap:1px;margin:14px 12px 0;background:rgba(244,241,230,.1);border-radius:8px;overflow:hidden">
+              <sc-for list="{{ auditStats }}" as="t" hint-placeholder-count="3">
+                
+              </sc-for>
+            </div>
+
+            
+
+            <sc-if value="{{ auditLeeg }}" hint-placeholder-val="{{ false }}">
+              <div style="margin:16px 14px 0;border-radius:12px;background:rgba(244,241,230,.05);border:1px dashed rgba(244,241,230,.2);padding:18px">
+                <div style="font:400 20px/1 Anton,sans-serif;color:#F4F1E6;text-transform:uppercase">Nog niets geboekt</div>
+                <div style="font:400 11px/1.5 'Space Grotesk',sans-serif;color:rgba(244,241,230,.5);margin-top:6px">{{ auditLeegTekst }}</div>
+              </div>
+            </sc-if>
+
+            <sc-for list="{{ auditDagen }}" as="d" hint-placeholder-count="4">
+              <div style="margin-top:16px">
+                <div style="padding:0 18px 7px;display:flex;align-items:baseline;gap:8px">
+                  <span style="font:400 9.5px ui-monospace,monospace;letter-spacing:.16em;color:{{ d.kopFg }}">{{ d.kop }}</span>
+                  <span style="font:400 9.5px ui-monospace,monospace;color:rgba(244,241,230,.3);margin-left:auto">{{ d.meta }}</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:1px;background:rgba(244,241,230,.08)">
+                  <sc-for list="{{ d.items }}" as="e" hint-placeholder-count="3">
+                    <div style="background:#161811;padding:11px 18px;display:flex;align-items:center;gap:10px">
+                      <div style="flex:none;width:34px;font:400 10px ui-monospace,monospace;color:rgba(244,241,230,.34)">{{ e.tijd }}</div>
+                      <div style="flex:none;min-width:34px;font:400 21px/1 Anton,sans-serif;color:{{ e.bedragFg }}">{{ e.bedrag }}</div>
+                      <div style="flex:1;min-width:0">
+                        <sc-if value="{{ e.heeftWie }}" hint-placeholder-val="{{ true }}">
+                          <div style="font:400 15px/1 Anton,sans-serif;color:#F4F1E6;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ e.wie }}</div>
+                        </sc-if>
+                        <div style="font:400 10.5px/1.35 'Space Grotesk',sans-serif;color:{{ e.doorFg }};margin-top:4px">{{ e.doorTekst }}</div>
+                      </div>
+                      <sc-if value="{{ e.heeftLabel }}" hint-placeholder-val="{{ false }}">
+                        <span style="flex:none;font:400 9px/1 Anton,sans-serif;letter-spacing:.09em;padding:5px 6px;border-radius:3px;background:{{ e.labelBg }};color:{{ e.labelFg }}">{{ e.label }}</span>
+                      </sc-if>
+                      <div style="flex:none;width:26px;height:26px;border-radius:99px;background:{{ e.doorBg }};color:{{ e.doorLetterFg }};font:700 11px/26px 'Space Grotesk',sans-serif;text-align:center">{{ e.doorLetter }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
 
         <sc-if value="{{ betalingenOpen }}" hint-placeholder-val="{{ false }}">
           <div style="flex:1;min-height:0;overflow-y:auto;padding:58px 0 34px">
@@ -199,25 +259,25 @@ a{color:#121310}a:hover{color:#000}
             <div style="margin:0 14px;display:flex;flex-direction:column;gap:9px">
               <div style="background:rgba(244,241,230,.06);border:1px solid {{ groepRand }};border-radius:10px;padding:11px 13px">
                 <div style="font:400 9.5px ui-monospace,monospace;letter-spacing:.14em;color:rgba(244,241,230,.4)">NAAM VAN DE GROEP</div>
-                <input value="{{ groepNaam }}" onChange="{{ zetGroepNaam }}" placeholder="bv. Chiro Elzestraat" style="width:100%;margin-top:5px;background:transparent;border:none;outline:none;color:#F4F1E6;font:400 22px/1.15 Anton,sans-serif;text-transform:uppercase" />
+                <input value="{{ groepNaam }}" onChange="{{ zetGroepNaam }}" placeholder="bv. Chiro Elzestraat" style="width:100%;margin-top:5px;background:transparent;border:none;outline:none;color:#F4F1E6;font:400 22px/1.15 Anton,sans-serif;text-transform:uppercase">
               </div>
             </div>
 
             <div style="padding:20px 18px 6px;font:400 9.5px ui-monospace,monospace;letter-spacing:.16em;color:rgba(244,241,230,.38)">VOLK ERBIJ HALEN</div>
             <div style="margin:0 14px;border-radius:12px;background:#1B1D17;border:1px solid rgba(244,241,230,.12);padding:16px">
-              <div style="font:400 11.5px/1.55 'Space Grotesk',sans-serif;color:rgba(244,241,230,.6);margin-bottom:14px">Mailen is de enige manier om erbij te komen. Ze melden zich aan met Google — <strong style="color:#F4F1E6">gebruik het adres van hun Google-account</strong>, anders vindt de uitnodiging hen niet.</div>
+              <div style="font:400 11.5px/1.55 'Space Grotesk',sans-serif;color:rgba(244,241,230,.6);margin-bottom:14px">Erbij komen gaat met een uitnodigingslink. Je deelt hem via het deelvenster van je toestel — groepschat, bericht, om het even waar. Wie hem opent, meldt zich aan met <strong style="color:#F4F1E6">Google</strong> en hangt meteen aan deze groep.</div>
               <div style="background:rgba(244,241,230,.06);border:1px solid {{ uitRand }};border-radius:10px;padding:11px 13px">
-                <div style="font:400 9.5px ui-monospace,monospace;letter-spacing:.14em;color:rgba(244,241,230,.4)">E-MAILADRES</div>
-                <input value="{{ uitContact }}" onChange="{{ zetUitContact }}" type="email" inputMode="email" autoCapitalize="none" placeholder="voornaam@mail.be" style="width:100%;margin-top:5px;background:transparent;border:none;outline:none;color:#F4F1E6;font:500 15px 'Space Grotesk',sans-serif" />
+                <div style="font:400 9.5px ui-monospace,monospace;letter-spacing:.14em;color:rgba(244,241,230,.4)">VOOR WIE IS DE LINK?</div>
+                <input value="{{ uitContact }}" onChange="{{ zetUitContact }}" placeholder="bv. Lotte" style="width:100%;margin-top:5px;background:transparent;border:none;outline:none;color:#F4F1E6;font:500 15px 'Space Grotesk',sans-serif">
               </div>
               <sc-if value="{{ uitFout }}" hint-placeholder-val="{{ false }}">
                 <div style="margin-top:9px;padding:10px 11px;border-radius:8px;background:rgba(228,72,58,.16);border:1px solid #E4483A;font:500 11.5px 'Space Grotesk',sans-serif;color:#F4F1E6">{{ uitFout }}</div>
               </sc-if>
-              <div onClick="{{ stuurUitnodiging }}" style="margin-top:10px;padding:14px;border-radius:9px;background:#D8F651;color:#121310;text-align:center;font:400 15px/1 Anton,sans-serif;letter-spacing:.04em;text-transform:uppercase;cursor:pointer">Mail de uitnodiging</div>
+              <div onClick="{{ stuurUitnodiging }}" style="margin-top:10px;padding:14px;border-radius:9px;background:#D8F651;color:#121310;text-align:center;font:400 15px/1 Anton,sans-serif;letter-spacing:.04em;text-transform:uppercase;cursor:pointer">Deel de uitnodiging</div>
             </div>
 
             <div style="padding:20px 18px 6px;display:flex;align-items:baseline;gap:8px">
-              <span style="font:400 9.5px ui-monospace,monospace;letter-spacing:.16em;color:rgba(244,241,230,.38)">GEMAILD, NOG NIET AANGESLOTEN</span>
+              <span style="font:400 9.5px ui-monospace,monospace;letter-spacing:.16em;color:rgba(244,241,230,.38)">LINK GEDEELD, NOG NIET BINNEN</span>
               <span style="font:400 9.5px ui-monospace,monospace;color:rgba(244,241,230,.28);margin-left:auto">{{ uitTelling }}</span>
             </div>
             <div style="display:flex;flex-direction:column;gap:1px;background:rgba(244,241,230,.08)">
@@ -225,13 +285,13 @@ a{color:#121310}a:hover{color:#000}
                 <div style="background:#161811;padding:13px 18px">
                   <div style="display:flex;align-items:center;gap:11px">
                     <div style="flex:1;min-width:0">
-                      <div style="font:500 13px/1.3 'Space Grotesk',sans-serif;color:#F4F1E6;overflow-wrap:anywhere">{{ u.email }}</div>
+                      <div style="font:500 13px/1.3 'Space Grotesk',sans-serif;color:#F4F1E6;overflow-wrap:anywhere">{{ u.naam }}</div>
                       <div style="font:400 10.5px/1.45 'Space Grotesk',sans-serif;color:rgba(244,241,230,.42);margin-top:4px">{{ u.meta }}</div>
                     </div>
                     <span style="flex:none;font:400 9px/1 Anton,sans-serif;letter-spacing:.09em;padding:5px 6px;border-radius:3px;background:{{ u.statusBg }};color:{{ u.statusFg }}">{{ u.status }}</span>
                   </div>
                   <div style="display:flex;align-items:center;gap:7px;margin-top:11px">
-                    <div onClick="{{ u.opnieuw }}" style="flex:1;text-align:center;padding:10px;border-radius:8px;border:1px solid rgba(244,241,230,.18);font:500 11px 'Space Grotesk',sans-serif;color:rgba(244,241,230,.72);cursor:pointer">Opnieuw mailen</div>
+                    <div onClick="{{ u.opnieuw }}" style="flex:1;text-align:center;padding:10px;border-radius:8px;border:1px solid rgba(244,241,230,.18);font:500 11px 'Space Grotesk',sans-serif;color:rgba(244,241,230,.72);cursor:pointer">Link opnieuw delen</div>
                     <div onClick="{{ u.trekIn }}" style="flex:none;padding:10px 13px;border-radius:8px;border:1px solid rgba(228,72,58,.5);font:500 11px 'Space Grotesk',sans-serif;color:#E4483A;cursor:pointer">Intrekken</div>
                   </div>
                 </div>
@@ -286,20 +346,15 @@ a{color:#121310}a:hover{color:#000}
             <div style="margin:20px 14px 0;border-radius:12px;background:#1B1D17;border:1px solid rgba(244,241,230,.12);padding:16px">
               <div style="background:rgba(244,241,230,.06);border:1px solid {{ bijnaamRand }};border-radius:10px;padding:11px 13px">
                 <div style="font:400 9.5px ui-monospace,monospace;letter-spacing:.14em;color:rgba(244,241,230,.4)">BIJNAAM</div>
-                <input value="{{ bijnaamWaarde }}" onChange="{{ zetBijnaam }}" placeholder="bv. Wollie" style="width:100%;margin-top:5px;background:transparent;border:none;outline:none;color:#F4F1E6;font:400 26px/1.1 Anton,sans-serif;text-transform:uppercase" />
+                <input value="{{ bijnaamWaarde }}" onChange="{{ zetBijnaam }}" placeholder="bv. Wollie" style="width:100%;margin-top:5px;background:transparent;border:none;outline:none;color:#F4F1E6;font:400 26px/1.1 Anton,sans-serif;text-transform:uppercase">
               </div>
               <div style="background:rgba(244,241,230,.06);border:1px solid rgba(244,241,230,.12);border-radius:10px;padding:11px 13px;margin-top:9px">
                 <div style="font:400 9.5px ui-monospace,monospace;letter-spacing:.14em;color:rgba(244,241,230,.4)">VOLLEDIGE NAAM</div>
-                <input value="{{ volNaamWaarde }}" onChange="{{ zetVolNaam }}" placeholder="bv. Wouter Lievens" style="width:100%;margin-top:5px;background:transparent;border:none;outline:none;color:#F4F1E6;font:500 15px 'Space Grotesk',sans-serif" />
+                <input value="{{ volNaamWaarde }}" onChange="{{ zetVolNaam }}" placeholder="bv. Wouter Lievens" style="width:100%;margin-top:5px;background:transparent;border:none;outline:none;color:#F4F1E6;font:500 15px 'Space Grotesk',sans-serif">
               </div>
               <sc-if value="{{ bijnaamFout }}" hint-placeholder-val="{{ false }}">
                 <div style="margin-top:9px;font:500 11px 'Space Grotesk',sans-serif;color:#E4483A">{{ bijnaamFoutTekst }}</div>
               </sc-if>
-              <div style="margin-top:16px;padding-top:15px;border-top:1px solid rgba(244,241,230,.1)">
-                <div style="font:400 9.5px ui-monospace,monospace;letter-spacing:.14em;color:rgba(244,241,230,.4)">MAILADRES VOOR JE AFREKENING</div>
-                <input value="{{ mijnMail }}" onChange="{{ zetMijnMail }}" type="email" inputMode="email" autoCapitalize="none" style="width:100%;margin-top:6px;background:transparent;border:none;outline:none;color:#F4F1E6;font:500 15px 'Space Grotesk',sans-serif" />
-                <div style="font:400 10.5px/1.5 'Space Grotesk',sans-serif;color:rgba(244,241,230,.45);margin-top:8px">{{ mijnKanaalUitleg }}</div>
-              </div>
 
               <div onClick="{{ bewaarProfiel }}" style="margin-top:13px;padding:14px;border-radius:9px;background:#D8F651;color:#121310;text-align:center;font:400 15px/1 Anton,sans-serif;letter-spacing:.04em;text-transform:uppercase;cursor:pointer">Bewaren</div>
             </div>
@@ -449,84 +504,27 @@ a{color:#121310}a:hover{color:#000}
                 <div style="font:400 10.5px/1.5 'Space Grotesk',sans-serif;color:rgba(244,241,230,.5);margin-top:6px">{{ innBerichtUitleg }}</div>
                 <div style="margin-top:12px;background:rgba(244,241,230,.06);border:1px solid rgba(244,241,230,.12);border-radius:10px;padding:10px 12px">
                   <div style="font:400 9.5px ui-monospace,monospace;letter-spacing:.14em;color:rgba(244,241,230,.4)">OPENINGSZIN</div>
-                  <input value="{{ innOpener }}" onChange="{{ zetInnOpener }}" style="width:100%;margin-top:5px;background:transparent;border:none;outline:none;color:#F4F1E6;font:500 13.5px/1.4 'Space Grotesk',sans-serif" />
+                  <input value="{{ innOpener }}" onChange="{{ zetInnOpener }}" style="width:100%;margin-top:5px;background:transparent;border:none;outline:none;color:#F4F1E6;font:500 13.5px/1.4 'Space Grotesk',sans-serif">
                 </div>
                 <div style="margin-top:9px;padding:12px 13px;border-radius:10px;background:rgba(244,241,230,.06);border:1px solid rgba(244,241,230,.12)">
                   <div style="font:400 10px ui-monospace,monospace;color:rgba(244,241,230,.42)">{{ innPreviewKop }}</div>
                   <div style="font:400 11.5px/1.65 'Space Grotesk',sans-serif;color:rgba(244,241,230,.85);margin-top:8px;white-space:pre-line">{{ innPreview }}</div>
                 </div>
                 <div style="display:flex;gap:7px;margin-top:12px">
-                  <div onClick="{{ innMailAllen }}" style="flex:1;text-align:center;padding:13px 6px;border-radius:9px;background:#D8F651;color:#121310;font:400 13px/1 Anton,sans-serif;letter-spacing:.04em;text-transform:uppercase;cursor:pointer">{{ innMailLabel }}</div>
-                  <div onClick="{{ innDeelGroep }}" style="flex:1;text-align:center;padding:13px 6px;border-radius:9px;border:1px solid rgba(244,241,230,.24);color:#F4F1E6;font:400 13px/1 Anton,sans-serif;letter-spacing:.04em;text-transform:uppercase;cursor:pointer">Deel in de groep</div>
+                  <div onClick="{{ innDeelGroep }}" style="flex:1;text-align:center;padding:14px 6px;border-radius:9px;background:#D8F651;color:#121310;font:400 14px/1 Anton,sans-serif;letter-spacing:.04em;text-transform:uppercase;cursor:pointer">Deel in de groep</div>
                 </div>
               </div>
             </sc-if>
 
-            <div style="display:flex;gap:6px;padding:14px 12px 4px">
-              <sc-for list="{{ innFilters }}" as="f" hint-placeholder-count="4">
-                <div onClick="{{ f.kies }}" style="flex:1;text-align:center;padding:9px 4px;border-radius:99px;cursor:pointer;background:{{ f.bg }};color:{{ f.fg }};border:1px solid {{ f.rand }};font:500 11px 'Space Grotesk',sans-serif">{{ f.label }}</div>
-              </sc-for>
-            </div>
+            
 
             <div onTouchStart="{{ innSwipeStart }}" onTouchEnd="{{ innSwipeEind }}" style="display:flex;flex-direction:column;gap:1px;background:rgba(244,241,230,.08);margin-top:8px">
               <sc-for list="{{ innLijst }}" as="r" hint-placeholder-count="6">
-                <div style="background:#161811;padding:12px 16px 13px">
-                  <div style="display:flex;align-items:center;gap:11px">
-                    <div style="flex:1;min-width:0;display:flex;align-items:baseline;gap:7px">
-                      <span style="font:400 17px/1 Anton,sans-serif;color:#F4F1E6;text-transform:uppercase">{{ r.nick }}</span>
-                      <span style="font:400 9px/1 Anton,sans-serif;letter-spacing:.09em;padding:4px 5px;border-radius:3px;background:{{ r.statusBg }};color:{{ r.statusFg }}">{{ r.status }}</span>
-                    </div>
-                    <div style="font:400 20px/1 Anton,sans-serif;color:#F4F1E6;flex:none">{{ r.euro }}</div>
-                  </div>
-                  <div style="display:flex;gap:7px;margin-top:10px">
-                    <sc-if value="{{ r.kanPorren }}" hint-placeholder-val="{{ true }}">
-                      <div onClick="{{ r.por }}" style="flex:1;padding:11px 6px;border-radius:8px;text-align:center;cursor:pointer;background:transparent;color:{{ r.porFg }};border:1px solid {{ r.porRand }};font:500 11.5px 'Space Grotesk',sans-serif">{{ r.porKnop }}</div>
-                    </sc-if>
-                    <div onClick="{{ r.doe }}" style="flex:1;padding:11px 6px;border-radius:8px;text-align:center;cursor:pointer;background:{{ r.knopBg }};color:{{ r.knopFg }};border:1px solid {{ r.knopRand }};font:500 11.5px 'Space Grotesk',sans-serif">{{ r.knop }}</div>
-                  </div>
-                </div>
+                
               </sc-for>
             </div>
 
-            <div style="padding:16px 18px 0;font:400 10.5px/1.55 'Space Grotesk',sans-serif;color:rgba(244,241,230,.42)">Jij bent de enige die kan afvinken. Wat een leider zelf doorgeeft, staat als <strong style="color:#F0A32B">na te kijken</strong> tot jij het op het rekeninguittreksel ziet.</div>
-          </div>
-        </sc-if>
-
-        <sc-if value="{{ deelOpen }}" hint-placeholder-val="{{ false }}">
-          <div onClick="{{ deelSluit }}" style="position:absolute;inset:0;z-index:98;background:rgba(0,0,0,.45)"></div>
-          <div style="position:absolute;left:0;right:0;bottom:0;z-index:99;background:#26282C;border-radius:16px 16px 0 0;padding:10px 0 16px;box-shadow:0 -14px 44px rgba(0,0,0,.5);animation:sheetUp .28s cubic-bezier(.2,.9,.3,1);font-family:system-ui,sans-serif">
-            <div style="width:38px;height:4px;border-radius:99px;background:rgba(255,255,255,.28);margin:0 auto 14px"></div>
-            <div style="display:flex;align-items:flex-start;gap:12px;padding:0 16px 14px">
-              <div style="width:42px;height:42px;border-radius:10px;background:#D8F651;color:#121310;font:400 21px/42px Anton,sans-serif;text-align:center;flex:none">S</div>
-              <div style="flex:1;min-width:0">
-                <div style="font:600 14.5px/1.25 system-ui,sans-serif;color:#fff">{{ deelTitel }}</div>
-                <div style="font:400 12.5px/1.35 system-ui,sans-serif;color:rgba(255,255,255,.6);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ deelSub }}</div>
-              </div>
-              <div onClick="{{ deelSluit }}" style="flex:none;width:30px;height:30px;border-radius:99px;background:rgba(255,255,255,.14);color:rgba(255,255,255,.75);display:grid;place-items:center;font:600 13px/1 system-ui,sans-serif;cursor:pointer">✕</div>
-            </div>
-
-            <div style="display:flex;gap:16px;padding:16px;overflow-x:auto;border-top:1px solid rgba(255,255,255,.1)">
-              <sc-for list="{{ deelApps }}" as="a" hint-placeholder-count="4">
-                <div onClick="{{ a.kies }}" style="width:60px;flex:none;text-align:center;cursor:pointer">
-                  <div style="width:56px;height:56px;margin:0 auto;border-radius:99px;background:{{ a.bg }};display:grid;place-items:center">
-                    <div style="width:26px;height:20px;background:#fff;border-radius:{{ a.vorm }}"></div>
-                  </div>
-                  <div style="font:400 11px/1.3 system-ui,sans-serif;color:rgba(255,255,255,.75);margin-top:7px">{{ a.label }}</div>
-                </div>
-              </sc-for>
-            </div>
-
-            <div style="margin:0 16px;border-radius:12px;background:rgba(255,255,255,.08);overflow:hidden">
-              <div onClick="{{ deelKopieer }}" style="padding:14px 15px;display:flex;align-items:center;gap:10px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.08)">
-                <span style="flex:1;font:400 14.5px/1.2 system-ui,sans-serif;color:#fff">Tekst kopiëren</span>
-                <span style="display:block;width:14px;height:14px;border:1.6px solid rgba(255,255,255,.6);border-radius:3px"></span>
-              </div>
-              <div onClick="{{ deelMeer }}" style="padding:14px 15px;display:flex;align-items:center;gap:10px;cursor:pointer">
-                <span style="flex:1;font:400 14.5px/1.2 system-ui,sans-serif;color:#fff">Andere apps…</span>
-                <span style="font:600 15px/1 system-ui,sans-serif;color:rgba(255,255,255,.4)">›</span>
-              </div>
-            </div>
-            <div style="padding:12px 16px 0;font:400 10.5px/1.4 system-ui,sans-serif;color:rgba(255,255,255,.38)">Deelvenster van je toestel — de app geeft alleen de tekst door.</div>
+            
           </div>
         </sc-if>
 
@@ -589,15 +587,11 @@ a{color:#121310}a:hover{color:#000}
             <div style="display:flex;flex-direction:column;gap:9px">
               <div style="background:rgba(244,241,230,.06);border:1px solid {{ nieuwNickRand }};border-radius:10px;padding:11px 13px">
                 <div style="font:400 9.5px ui-monospace,monospace;letter-spacing:.14em;color:rgba(244,241,230,.4)">BIJNAAM</div>
-                <input value="{{ nieuwNick }}" onChange="{{ zetNieuwNick }}" placeholder="bv. Wollie" style="width:100%;margin-top:5px;background:transparent;border:none;outline:none;color:#F4F1E6;font:400 22px/1.1 Anton,sans-serif;text-transform:uppercase" />
+                <input value="{{ nieuwNick }}" onChange="{{ zetNieuwNick }}" placeholder="bv. Wollie" style="width:100%;margin-top:5px;background:transparent;border:none;outline:none;color:#F4F1E6;font:400 22px/1.1 Anton,sans-serif;text-transform:uppercase">
               </div>
               <div style="background:rgba(244,241,230,.06);border:1px solid rgba(244,241,230,.12);border-radius:10px;padding:11px 13px">
                 <div style="font:400 9.5px ui-monospace,monospace;letter-spacing:.14em;color:rgba(244,241,230,.4)">ECHTE NAAM</div>
-                <input value="{{ nieuwNaam }}" onChange="{{ zetNieuwNaam }}" placeholder="bv. Wout D." style="width:100%;margin-top:5px;background:transparent;border:none;outline:none;color:#F4F1E6;font:500 15px 'Space Grotesk',sans-serif" />
-              </div>
-              <div style="background:rgba(244,241,230,.06);border:1px solid rgba(244,241,230,.12);border-radius:10px;padding:11px 13px">
-                <div style="font:400 9.5px ui-monospace,monospace;letter-spacing:.14em;color:rgba(244,241,230,.4)">E-MAIL · OPTIONEEL</div>
-                <input value="{{ nieuwMail }}" onChange="{{ zetNieuwMail }}" type="email" inputMode="email" autoCapitalize="none" placeholder="alleen voor berichten over de afrekening" style="width:100%;margin-top:5px;background:transparent;border:none;outline:none;color:#F4F1E6;font:500 15px 'Space Grotesk',sans-serif" />
+                <input value="{{ nieuwNaam }}" onChange="{{ zetNieuwNaam }}" placeholder="bv. Wout D." style="width:100%;margin-top:5px;background:transparent;border:none;outline:none;color:#F4F1E6;font:500 15px 'Space Grotesk',sans-serif">
               </div>
             </div>
 
@@ -607,7 +601,7 @@ a{color:#121310}a:hover{color:#000}
 
             <div style="margin-top:12px;padding:11px 12px;border-radius:9px;background:rgba(240,163,43,.1);border:1px solid rgba(240,163,43,.4)">
               <div style="font:400 12px/1 Anton,sans-serif;letter-spacing:.04em;color:#F0A32B;text-transform:uppercase">Eenmalig, geen account</div>
-              <div style="font:400 10.5px/1.5 'Space Grotesk',sans-serif;color:rgba(244,241,230,.6);margin-top:5px">Een gast krijgt geen login en staat alleen op deze lijst. Met een e-mailadres krijgt hij bericht over zijn afrekening. Bij het afsluiten rekent hij af als iedereen, daarna verdwijnt hij. Vaste leiders zet je in de adminzone — die staan automatisch op elke nieuwe periode.</div>
+              <div style="font:400 10.5px/1.5 'Space Grotesk',sans-serif;color:rgba(244,241,230,.6);margin-top:5px">Een gast krijgt geen login en staat alleen op deze lijst. Bij het afsluiten rekent hij af als iedereen, daarna verdwijnt hij. Vaste leiders zet je in de adminzone — die staan automatisch op elke nieuwe periode.</div>
             </div>
 
             <div style="display:flex;gap:8px;margin-top:16px">
@@ -641,14 +635,11 @@ a{color:#121310}a:hover{color:#000}
               <sc-if value="{{ wz1 }}" hint-placeholder-val="{{ true }}">
                 <div style="border-radius:12px;background:#1B1D17;border:1px solid rgba(244,241,230,.12);padding:15px;margin-bottom:14px">
                   <div style="font:400 9.5px ui-monospace,monospace;letter-spacing:.14em;color:rgba(244,241,230,.4)">LAATSTE DAG VAN PERIODE {{ periodeNummer }}</div>
-                  <input type="date" value="{{ eindISO }}" min="{{ eindMinISO }}" onChange="{{ zetEindISO }}" style="width:100%;margin-top:6px;background:transparent;border:none;outline:none;color:#F4F1E6;font:400 26px/1.15 Anton,sans-serif;text-transform:uppercase;colorScheme:dark" />
+                  <input type="date" value="{{ eindISO }}" min="{{ eindMinISO }}" onChange="{{ zetEindISO }}" style="width:100%;margin-top:6px;background:transparent;border:none;outline:none;color:#F4F1E6;font:400 26px/1.15 Anton,sans-serif;text-transform:uppercase;colorScheme:dark">
                   <div style="font:400 10px 'Space Grotesk',sans-serif;color:rgba(244,241,230,.42);margin-top:6px">{{ eindDagen }}</div>
                   <div style="font:400 10.5px/1.45 'Space Grotesk',sans-serif;color:rgba(244,241,230,.42);margin-top:10px">{{ eindWizardUitleg }}</div>
                 </div>
-                <div style="border-radius:12px;background:#1B1D17;border:1px solid rgba(244,241,230,.12);padding:15px">
-                  <div style="font:400 14px/1 Anton,sans-serif;color:#F4F1E6;text-transform:uppercase">Berichten komen later</div>
-                  <div style="font:400 10.5px/1.55 'Space Grotesk',sans-serif;color:rgba(244,241,230,.5);margin-top:7px">Afsluiten stuurt niets. Zodra de laatste dag voorbij is, staat het bericht klaar bij de periode in Inningen — mailen naar ieder apart of één bericht delen in de groep.</div>
-                </div>
+                
               </sc-if>
 
               <sc-if value="{{ wz2 }}" hint-placeholder-val="{{ false }}">
@@ -817,7 +808,37 @@ class Component extends DCLogic {
       ['Arne', 'Arne G.', 0, 0, null],
       ['Stef', 'Stef R.', 3, 0, null, true]
     ];
+    // Logboek van de lopende periode: elke boeking apart, zodat de som per persoon klopt met de lijst.
+    const dagenP = ['6 juli', '7 juli', '8 juli', '9 juli', '10 juli', '11 juli', '12 juli'];
+    const jj = n => { const x = Math.sin(n * 12.9898) * 43758.5453; return x - Math.floor(x); };
+    const uur = (i, d) => String(18 + Math.floor(jj(i * 7 + d) * 5)).padStart(2, '0') + ':' + String(Math.floor(jj(i * 11 + d * 5) * 60)).padStart(2, '0');
+    const log = [];
+    let lid = 1;
+    M.forEach((m, i) => {
+      let rem = m[2], d = dagenP.length - 1;
+      while (rem > 0 && d >= 0) {
+        if (jj(i * 9 + d) < 0.34 && d > 0) { d--; continue; }
+        const chunk = Math.min(rem, 1 + Math.floor(jj(i * 5 + d * 3) * 4));
+        const zelf = jj(i * 3 + d + 1) > 0.28;
+        log.push({
+          id: lid++, pid: i, soort: 'streep', n: chunk, dag: dagenP[d], tijd: uur(i, d),
+          door: zelf ? m[0] : M[(i + 1 + Math.floor(jj(i + d) * 5)) % M.length][0]
+        });
+        rem -= chunk; d--;
+      }
+      if (rem > 0) log.push({ id: lid++, pid: i, soort: 'streep', n: rem, dag: dagenP[0], tijd: '20:05', door: m[0] });
+      for (let b = 0; b < m[3]; b++) {
+        const d2 = 1 + Math.floor(jj(i * 13 + b) * 5);
+        log.push({ id: lid++, pid: i, soort: 'bak', n: 1, dag: dagenP[d2], tijd: uur(i + 40, d2), door: b % 2 ? 'Seppe' : m[0] });
+      }
+    });
+    // Twee correcties: wat geschrapt is blijft in het logboek staan (met de streep ervoor, zodat de totalen kloppen).
+    [[4, 3, 'Wollie'], [9, 4, 'Mie']].forEach((c, k) => {
+      log.push({ id: lid++, pid: c[0], soort: 'streep', n: 1, dag: dagenP[c[1]], tijd: '19:' + (12 + k * 7), door: c[2] });
+      log.push({ id: lid++, pid: c[0], soort: 'schrapStreep', n: 1, dag: dagenP[c[1]], tijd: '22:' + (41 - k * 6), door: c[2] });
+    });
     this.state = {
+      log: log, auditId: 0, auditAlles: false,
       mensen: M.map((m, i) => ({ id: i, nick: m[0], naam: m[1], streep: m[2], bak: m[3], door: m[4], gast: !!m[5] })),
       holdId: null, bakVoor: null, bakAantal: 1, zetPas: null, zetFade: false,
       geluid: true, correctie: false,
@@ -827,14 +848,14 @@ class Component extends DCLogic {
       plan: { eind: null },
       vorigeStreepjes: [26, 24, 23, 22, 22, 21, 21, 21, 20, 20, 19, 19, 18, 18, 18],
       toast: null, toastFade: false, slotFlits: false,
-      nieuwOpen: false, nieuwNick: '', nieuwNaam: '', nieuwMail: '', nieuwFout: null,
+      nieuwOpen: false, nieuwNick: '', nieuwNaam: '', nieuwFout: null,
       menuOpen: false,
       groep: { naam: 'Chiro Elzestraat', plaats: 'De Frigo · Elzestraat 12' },
       uitContact: '', uitFout: null,
       uitnodigingen: [
-        { id: 1, email: 'lotte.dm@gmail.com', gemaild: 'gisteren 20:14', herinnerd: 0 },
-        { id: 2, email: 'jonas.vercammen@gmail.com', gemaild: 'di 8 juli', herinnerd: 1 },
-        { id: 3, email: 'seppe.claes@gmail.com', gemaild: 'vr 4 juli', herinnerd: 2 }
+        { id: 1, naam: 'Lotte', gedeeld: 'gisteren 20:14', opnieuw: 0 },
+        { id: 2, naam: 'Jonas', gedeeld: 'di 8 juli', opnieuw: 1 },
+        { id: 3, naam: 'Seppe', gedeeld: 'vr 4 juli', opnieuw: 2 }
       ],
       volgendeUit: 4,
       rollen: { 0: 'beheerder', 12: 'drankleider', 13: 'drankleider', 6: 'beheerder' },
@@ -863,10 +884,7 @@ class Component extends DCLogic {
         });
         return o;
       })(),
-      profielNick: 'Wollie', profielNaam: 'Wouter Lievens', profielFout: null,
-      mails: M.map(m => m[0].toLowerCase() + '@mail.be'),
-      autoBericht: true,
-      deel: null
+      profielNick: 'Wollie', profielNaam: 'Wouter Lievens', profielFout: null
     };
     this.mijnId = 0;
     this.vandaag = '12 juli';
@@ -888,6 +906,10 @@ class Component extends DCLogic {
   mededeling(nick, p) {
     const A = p || this.state.afrekening;
     return 'STREEPJES P' + A.nr + ' ' + this.kort(A.start) + '-' + this.kort(A.eind) + ' ' + nick.toUpperCase();
+  }
+
+  uitLink(naam) {
+    return 'https://streepkeslijst.app/join/' + (this.state.groep.naam || 'groep').toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + naam.toLowerCase().replace(/[^a-z0-9]+/g, '');
   }
 
   kopieer(sleutel, tekst, wat) {
@@ -979,12 +1001,35 @@ class Component extends DCLogic {
     this.zetT = setTimeout(() => this.setState({ zetPas: null, zetFade: false }), 4500);
   }
 
+  nuTijd() {
+    const d = new Date();
+    return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
+
+  mijnNick() {
+    const m = this.state.mensen.find(x => x.id === this.mijnId);
+    return m ? m.nick : 'ik';
+  }
+
+  boek(s, id, soort, n) {
+    this._lid = (this._lid || 9000) + 1;
+    return s.log.concat([{ id: this._lid, pid: id, soort: soort, n: n, dag: this.vandaag, tijd: this.nuTijd(), door: this.mijnNick() }]);
+  }
+
+  ontboek(log, id, soort) {
+    for (let i = log.length - 1; i >= 0; i--) {
+      if (log[i].pid === id && log[i].soort === soort) return log.slice(0, i).concat(log.slice(i + 1));
+    }
+    return log;
+  }
+
   streep(id, n) {
     if (this.opSlot()) return;
     n = n || 1;
     this.klik('streep');
     this.setState(s => ({
       mensen: s.mensen.map(m => m.id === id ? Object.assign({}, m, { streep: m.streep + n, door: id === this.mijnId ? m.door : { door: 'Wollie', min: 0 } }) : m),
+      log: this.boek(s, id, 'streep', n),
       zetPas: { id, n, soort: 'streep' }, zetFade: false
     }));
     this.zegSnack();
@@ -995,6 +1040,7 @@ class Component extends DCLogic {
     this.klik('bak');
     this.setState(s => ({
       mensen: s.mensen.map(m => m.id === id ? Object.assign({}, m, { bak: m.bak + aantal }) : m),
+      log: this.boek(s, id, 'bak', aantal),
       bakVoor: null, bakAantal: 1, zetPas: { id, n: aantal, soort: 'bak' }, zetFade: false
     }));
     this.zegSnack();
@@ -1009,6 +1055,7 @@ class Component extends DCLogic {
       mensen: s.mensen.map(m => m.id === id
         ? Object.assign({}, m, soort === 'bak' ? { bak: m.bak - 1 } : { streep: m.streep - 1 })
         : m),
+      log: this.boek(s, id, soort === 'bak' ? 'schrapBak' : 'schrapStreep', 1),
       zetPas: { id, n: 1, soort: soort === 'bak' ? 'schrapBak' : 'schrapStreep' }, zetFade: false
     }));
     this.zegSnack();
@@ -1026,6 +1073,7 @@ class Component extends DCLogic {
         if (delta.streep) d.streep = Math.max(0, m.streep + delta.streep);
         return d;
       }),
+      log: this.ontboek(s.log, id, z.soort),
       zetPas: null, zetFade: false
     }));
   }
@@ -1036,29 +1084,26 @@ class Component extends DCLogic {
     if (this.state.mensen.some(m => m.nick.toLowerCase() === nick.toLowerCase())) {
       this.setState({ nieuwFout: nick + ' staat al op de lijst.' }); return;
     }
-    const mail = this.state.nieuwMail.trim();
-    if (mail && !this.geldigMail(mail)) { this.setState({ nieuwFout: 'Dat lijkt geen geldig e-mailadres.' }); return; }
     this.setState(s => ({
-      mensen: s.mensen.concat([{ id: Math.max.apply(null, s.mensen.map(m => m.id)) + 1, nick: nick, naam: naam || 'gast', streep: 0, bak: 0, door: null, gast: true, mail: mail || null }]),
-      nieuwOpen: false, nieuwNick: '', nieuwNaam: '', nieuwMail: '', nieuwFout: null
+      mensen: s.mensen.concat([{ id: Math.max.apply(null, s.mensen.map(m => m.id)) + 1, nick: nick, naam: naam || 'gast', streep: 0, bak: 0, door: null, gast: true }]),
+      nieuwOpen: false, nieuwNick: '', nieuwNaam: '', nieuwFout: null
     }));
-    this.zegToast(mail ? nick + ' staat op de lijst als gast · berichten gaan naar ' + mail : nick + ' staat op de lijst als gast · alleen voor periode ' + this.state.periode.nr);
+    this.zegToast(nick + ' staat op de lijst als gast · alleen voor periode ' + this.state.periode.nr);
   }
 
-  geldigMail(v) { return /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(v); }
-
-  // Delen gaat via het deelvenster van het toestel: de app levert de tekst en vergeet ze daarna.
-  deelApp(app, id, mode) {
-    const m = id == null ? null : this.state.mensen.find(x => x.id === id);
-    this.setState({ deel: null });
-    this.zegToast(m
-      ? (mode === 'por' ? 'Por voor ' : 'Afrekening voor ') + m.nick + ' doorgegeven aan ' + app
-      : 'Groepsbericht doorgegeven aan ' + app);
-  }
-
-  mailPor(ids) {
-    if (!ids.length) return;
-    this.zegToast('Por gemaild naar ' + ids.length + ' leiders · niet bijgehouden');
+  // Delen gaat via de Web Share API van het toestel: de app levert de tekst en vergeet ze daarna.
+  deelNatief(titel, tekst, wat) {
+    const data = { title: titel, text: tekst };
+    const klaar = () => this.zegToast(wat + ' doorgegeven aan het deelvenster · niet bijgehouden');
+    try {
+      if (navigator.share && (!navigator.canShare || navigator.canShare(data))) {
+        navigator.share(data).then(klaar, e => {
+          if (!e || e.name !== 'AbortError') this.kopieer('deel', tekst, wat);
+        });
+        return;
+      }
+    } catch (e) { }
+    this.kopieer('deel', tekst, wat);
   }
 
   // "12 juli" → "13 juli"; periodes sluiten naadloos op elkaar aan.
@@ -1141,7 +1186,7 @@ class Component extends DCLogic {
       wz: null, deel: null,
       scherm: 'inningen', menuOpen: false, innNr: nr, innFilter: 'alles'
     }));
-    this.zegToast('Periode ' + nr + ' afgesloten · iedereen ziet zijn bedrag onder Betalen');
+    this.zegToast('Periode ' + nr + ' afgesloten · periode ' + (nr + 1) + ' loopt sinds ' + this.dagNa(eind));
   }
 
   zegToast(tekst) {
@@ -1207,8 +1252,7 @@ class Component extends DCLogic {
     const innSelOpenEuro = innSelOpen.reduce((a, m) => a + innBedrag(m), 0);
     const innSelTotaal = innMensen.reduce((a, m) => a + innBedrag(m), 0);
 
-    // ── Berichten: automatische mail bij afsluiten + het deelvenster van het toestel
-    const bModus = s.deel ? s.deel.mode : 'afrekening';
+    // ── Berichten: tekst klaarzetten en doorgeven aan het deelvenster van het toestel
     const bereikKort = this.kort(A.start) + ' → ' + this.kort(A.eind);
     const berichtVoor = (m, mode) => {
       const bedrag = this.euro(p6Bedrag(m));
@@ -1226,12 +1270,7 @@ class Component extends DCLogic {
         + 'Jouw deel: ' + bedrag + ' · ' + p6Streep(m) + ' streepjes.\n'
         + 'Rekening ' + s.iban + ' (' + s.begunstigde + ')\nMededeling: ' + med + '\nMerci! — ' + ik.nick;
     };
-    const ontvangersVan = mode => s.mensen.filter(m => m.id !== this.mijnId && p6Streep(m) > 0
-      && (mode !== 'por' || (s.p6[m.id] || 'open') !== 'betaald'));
     const innOpenMensen = innMensen.filter(m => m.id !== this.mijnId && innSt(m) !== 'betaald');
-    const sluitOntv = s.mensen.filter(m => m.id !== this.mijnId && tot(m) > 0);
-    const deelDoel = s.deel && s.deel.id != null ? s.mensen.find(m => m.id === s.deel.id) : null;
-    const deelTekst = s.deel ? (s.deel.tekst || (deelDoel ? berichtVoor(deelDoel, s.deel.mode) : '')) : '';
 
     // ── Afsluitwizard: alles wat de drankleider kiest voor het afsluiten
     const W = s.wz || {};
@@ -1247,15 +1286,7 @@ class Component extends DCLogic {
     // ── Bericht van een afgesloten periode: pas te versturen als de laatste dag voorbij is
     const innVervaldag = this.dagenNa(innP.eind, 10);
     const innBerichtMensen = innMensen.filter(m => m.id !== this.mijnId);
-    const innVoorbeeld = innBerichtMensen[0] || ik;
-    const innPersoonlijk = m => ['Dag ' + m.nick + ',', s.innOpener,
-      'Periode ' + innP.nr + ' · ' + innP.start + ' → ' + innP.eind,
-      'Jouw deel: ' + this.euro(innBedrag(m)) + ' · ' + innStreep(m) + ' streepjes.',
-      'Rekening ' + s.iban + ' (' + s.begunstigde + ')',
-      'Mededeling: ' + this.mededeling(m.nick, innP),
-      'Graag overschrijven voor ' + innVervaldag + '.',
-      '— ' + ik.nick].filter(l => l).join('\n');
-    const innGroepsBericht = [s.innOpener,
+    const innGroepsBericht = ['Dag allemaal,', s.innOpener,
       'Periode ' + innP.nr + ' (' + innP.start + ' → ' + innP.eind + ') · ' + innMensen.reduce((a, m) => a + innStreep(m), 0) + ' streepjes, ' + this.euro(innSelTotaal) + ' in totaal.',
       'Ieder vindt zijn eigen bedrag en mededeling in de app onder Betalen — bedragen staan niet in dit bericht.',
       'Rekening ' + s.iban + ' (' + s.begunstigde + ')',
@@ -1292,9 +1323,72 @@ class Component extends DCLogic {
           this.setState({ holdId: null });
           if (this.state.correctie) this.schrap(m.id, 'streep'); else this.streep(m.id, 1);
         },
-        cancel: () => { clearTimeout(this.holdT); if (this.state.holdId === m.id) this.setState({ holdId: null }); }
+        cancel: () => { clearTimeout(this.holdT); if (this.state.holdId === m.id) this.setState({ holdId: null }); },
+        stop: e => { e.stopPropagation(); },
+        openAudit: e => {
+          if (e) e.stopPropagation();
+          clearTimeout(this.holdT);
+          this.setState({ scherm: 'audit', auditId: m.id, auditAlles: false, holdId: null });
+        }
       };
     });
+
+    // ── Logboek van de periode: per dag, met wie de streep zette
+    const nickVan = pid => { const p = s.mensen.find(x => x.id === pid); return p ? p.nick : '?'; };
+    const auditPid = s.auditAlles ? null : s.auditId;
+    const auditP = s.mensen.find(m => m.id === s.auditId) || s.mensen[0];
+    const auditEvents = s.log.filter(e => auditPid == null || e.pid === auditPid);
+    const dagNamen = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'];
+    const auditBuckets = {};
+    auditEvents.forEach(e => { (auditBuckets[e.dag] = auditBuckets[e.dag] || []).push(e); });
+    const auditDagen = Object.keys(auditBuckets)
+      .sort((a, b) => this.dagNummer(b) - this.dagNummer(a))
+      .map(dag => {
+        // Per uur samengevoegd: wie in hetzelfde uur meermaals streepte, staat als één regel.
+        const perUur = {};
+        auditBuckets[dag].forEach(e => {
+          const u = String(e.tijd).slice(0, 2);
+          const k = u + '|' + e.soort + '|' + e.door + '|' + e.pid;
+          if (!perUur[k]) perUur[k] = { uur: u, soort: e.soort, door: e.door, pid: e.pid, n: 0, keer: 0, tijd: u + ':00' };
+          perUur[k].n += e.n; perUur[k].keer += 1;
+        });
+        const items = Object.keys(perUur).map(k => perUur[k])
+          .sort((a, b) => (a.uur < b.uur ? 1 : a.uur > b.uur ? -1 : 0));
+        const netto = items.reduce((a, e) => a + (e.soort === 'streep' ? e.n : e.soort === 'schrapStreep' ? -e.n : 0), 0);
+        const bakken = items.reduce((a, e) => a + (e.soort === 'bak' ? e.n : 0), 0);
+        const iso = this.naarISO(dag);
+        const wd = iso ? dagNamen[new Date(iso + 'T12:00:00').getDay()] : '';
+        return {
+          kop: (dag === this.vandaag ? 'VANDAAG · ' : '') + (wd ? wd.toUpperCase() + ' ' : '') + dag.toUpperCase(),
+          kopFg: dag === this.vandaag ? '#D8F651' : 'rgba(244,241,230,.38)',
+          meta: '+' + netto + ' streepjes' + (bakken ? ' · ' + bakken + ' BAK' : ''),
+          items: items.map(e => {
+            const isBak = e.soort === 'bak' || e.soort === 'schrapBak';
+            const isSchrap = e.soort === 'schrapStreep' || e.soort === 'schrapBak';
+            const zelf = e.door === nickVan(e.pid);
+            const ikZette = e.door === ik.nick;
+            return {
+              tijd: e.uur + 'u',
+              bedrag: (isSchrap ? '−' : '+') + e.n,
+              bedragFg: isSchrap ? '#E4483A' : isBak ? '#F0A32B' : '#F4F1E6',
+              heeftWie: auditPid == null,
+              wie: nickVan(e.pid),
+              heeftLabel: isBak || isSchrap,
+              label: isSchrap ? 'GESCHRAPT' : e.n > 1 ? 'BAKKEN' : 'BAK',
+              labelBg: isSchrap ? 'rgba(228,72,58,.16)' : 'rgba(240,163,43,.16)',
+              labelFg: isSchrap ? '#E4483A' : '#F0A32B',
+              doorTekst: (zelf ? 'zelf gezet' : ikZette ? 'door jou' : 'door ' + e.door) + (e.keer > 1 ? ' · ' + e.keer + ' keer dit uur' : ''),
+              doorFg: zelf ? 'rgba(244,241,230,.42)' : '#C7A6FF',
+              doorLetter: String(e.door).charAt(0).toUpperCase(),
+              doorBg: ikZette ? '#D8F651' : zelf ? 'rgba(244,241,230,.12)' : '#7A4BD1',
+              doorLetterFg: ikZette ? '#121310' : zelf ? 'rgba(244,241,230,.7)' : '#F4F1E6'
+            };
+          })
+        };
+      });
+    const auditStreepTot = auditEvents.reduce((a, e) => a + (e.soort === 'streep' ? e.n : e.soort === 'schrapStreep' ? -e.n : 0), 0);
+    const auditBakTot = auditEvents.reduce((a, e) => a + (e.soort === 'bak' ? e.n : e.soort === 'schrapBak' ? -e.n : 0), 0);
+    const auditAnderen = auditEvents.filter(e => e.door !== nickVan(e.pid)).length;
 
     const bakP = s.bakVoor != null ? s.mensen.find(m => m.id === s.bakVoor) : null;
     const zet = (id, tekst) => () => this.setState(x => ({ meldStatus: Object.assign({}, x.meldStatus, { [id]: tekst }) }));
@@ -1419,7 +1513,7 @@ class Component extends DCLogic {
         },
         {
           nr: '3', titel: 'Nog geen berichten', tint: 'rgba(244,241,230,.1)', kleur: '#F4F1E6',
-          detail: 'Afsluiten stuurt niets. Vanaf ' + this.dagNa(P.eind || this.vandaag) + ' staat het bericht klaar bij periode ' + P.nr + ' in Inningen — mailen of delen kies je daar.'
+          detail: 'Afsluiten stuurt niets. Vanaf ' + this.dagNa(P.eind || this.vandaag) + ' staat het bericht klaar bij periode ' + P.nr + ' in Inningen — delen doe je daar, met het deelvenster van je toestel.'
         },
         {
           nr: '4', titel: 'Periode ' + (P.nr + 1) + ' start', tint: 'rgba(216,246,81,.18)', kleur: '#D8F651',
@@ -1450,35 +1544,6 @@ class Component extends DCLogic {
       begunstigdeWaarde: s.begunstigde,
       zetBegunstigde: e => this.setState({ begunstigde: e.target.value }),
 
-      // ── Deelvenster van het toestel (Web Share)
-      deelOpen: !!s.deel,
-      deelTitel: s.deel && s.deel.groep ? 'Periode ' + s.deel.nr + ' afgesloten'
-        : (s.deel && s.deel.mode === 'por' ? 'Por periode ' : 'Afrekening periode ') + A.nr,
-      deelSub: deelTekst.split('\n')[0],
-      deelApps: [
-        { label: 'WhatsApp', bg: '#25D366', vorm: '11px 11px 11px 3px' },
-        { label: 'Messenger', bg: '#7A4BD1', vorm: '11px' },
-        { label: 'Berichten', bg: '#4C8DF6', vorm: '11px 11px 3px 11px' },
-        { label: 'Mail', bg: '#5B6470', vorm: '3px' }
-      ].map(a => ({
-        label: a.label, bg: a.bg, vorm: a.vorm,
-        kies: () => { if (s.deel) this.deelApp(a.label, s.deel.id, s.deel.mode); }
-      })),
-      deelKopieer: () => {
-        if (deelTekst) this.kopieer('deel', deelTekst, 'Bericht');
-        this.setState({ deel: null });
-      },
-      deelMeer: () => { this.setState({ deel: null }); this.zegToast('Elke app die tekst aanneemt, staat in het deelvenster van je toestel'); },
-      deelSluit: () => this.setState({ deel: null }),
-
-      // ── Mijn mailadres (profiel)
-      mijnMail: s.mails[this.mijnId] || '',
-      zetMijnMail: e => {
-        const w = e.target.value;
-        this.setState(y => { const h = y.mails.slice(); h[this.mijnId] = w; return { mails: h }; });
-      },
-      mijnKanaalUitleg: 'Hier komt je afrekening binnen zodra de drankleider een periode afsluit — en een por als je vergeet over te schrijven. Een por kan ook rechtstreeks in je chat komen: de drankleider deelt ze dan met zijn eigen app.',
-
       // ── Beheer (alleen voor beheerders)
       beheerOpen: s.scherm === 'beheer',
       groepNaam: s.groep.naam,
@@ -1493,28 +1558,32 @@ class Component extends DCLogic {
       zetUitContact: e => this.setState({ uitContact: e.target.value, uitFout: null }),
       stuurUitnodiging: () => {
         const c = s.uitContact.trim();
-        if (!this.geldigMail(c)) { this.setState({ uitFout: 'Geef een geldig e-mailadres.' }); return; }
-        if (s.uitnodigingen.some(u => u.email.toLowerCase() === c.toLowerCase())) { this.setState({ uitFout: 'Die is al uitgenodigd — stuur de mail opnieuw hieronder.' }); return; }
+        if (!c) { this.setState({ uitFout: 'Voor wie is de link? Geef een naam.' }); return; }
+        if (s.uitnodigingen.some(u => u.naam.toLowerCase() === c.toLowerCase())) { this.setState({ uitFout: 'Die link staat al open — deel hem hieronder opnieuw.' }); return; }
         this.setState(x => ({
-          uitnodigingen: [{ id: x.volgendeUit, email: c, gemaild: 'net nu', herinnerd: 0 }].concat(x.uitnodigingen),
+          uitnodigingen: [{ id: x.volgendeUit, naam: c, gedeeld: 'net nu', opnieuw: 0 }].concat(x.uitnodigingen),
           volgendeUit: x.volgendeUit + 1, uitContact: '', uitFout: null
         }));
-        this.zegToast('Uitnodiging gemaild naar ' + c);
+        this.deelNatief('Uitnodiging voor ' + s.groep.naam,
+          'Kom mee op de streepkeslijst van ' + s.groep.naam + '.\n' + this.uitLink(c) + '\nOpen de link en meld je aan met Google.',
+          'Uitnodiging voor ' + c);
       },
       uitTelling: s.uitnodigingen.length + ' wachtend',
       uitnodigingen: s.uitnodigingen.map(u => ({
-        email: u.email,
-        meta: 'Gemaild ' + u.gemaild + (u.herinnerd ? ' · ' + u.herinnerd + ' keer opnieuw' : '') + ' · sluit aan zodra hij met dit adres bij Google inlogt',
-        status: u.herinnerd ? 'HERINNERD' : 'GEMAILD',
-        statusBg: u.herinnerd ? 'rgba(240,163,43,.16)' : 'rgba(216,246,81,.16)',
-        statusFg: u.herinnerd ? '#F0A32B' : '#D8F651',
+        naam: u.naam,
+        meta: 'Link gedeeld ' + u.gedeeld + (u.opnieuw ? ' · ' + u.opnieuw + ' keer opnieuw' : '') + ' · hij zit erin zodra hij de link opent en met Google inlogt',
+        status: u.opnieuw ? 'HERDEELD' : 'GEDEELD',
+        statusBg: u.opnieuw ? 'rgba(240,163,43,.16)' : 'rgba(216,246,81,.16)',
+        statusFg: u.opnieuw ? '#F0A32B' : '#D8F651',
         opnieuw: () => {
-          this.setState(x => ({ uitnodigingen: x.uitnodigingen.map(v => v.id === u.id ? Object.assign({}, v, { gemaild: 'net nu', herinnerd: v.herinnerd + 1 }) : v) }));
-          this.zegToast('Uitnodiging opnieuw gemaild naar ' + u.email);
+          this.setState(x => ({ uitnodigingen: x.uitnodigingen.map(v => v.id === u.id ? Object.assign({}, v, { gedeeld: 'net nu', opnieuw: v.opnieuw + 1 }) : v) }));
+          this.deelNatief('Uitnodiging voor ' + s.groep.naam,
+            'Kom mee op de streepkeslijst van ' + s.groep.naam + '.\n' + this.uitLink(u.naam) + '\nOpen de link en meld je aan met Google.',
+            'Uitnodiging voor ' + u.naam);
         },
         trekIn: () => {
           this.setState(x => ({ uitnodigingen: x.uitnodigingen.filter(v => v.id !== u.id) }));
-          this.zegToast('Uitnodiging voor ' + u.email + ' ingetrokken · de link werkt niet meer');
+          this.zegToast('Uitnodiging voor ' + u.naam + ' ingetrokken · de link werkt niet meer');
         }
       })),
 
@@ -1597,14 +1666,12 @@ class Component extends DCLogic {
       innPLabel: 'PERIODE ' + innP.nr + ' · ' + this.kort(innP.start) + '–' + this.kort(innP.eind),
       innBerichtKlaar: innBerichtMensen.length > 0 && this.dagenTussen(innP.eind, this.vandaag) >= 0,
       innBerichtKop: 'Bericht voor periode ' + innP.nr,
-      innBerichtUitleg: innBerichtMensen.length + ' leiders met streepjes · ' + this.euro(innSelTotaal) + '. Mailen gaat per persoon, met zijn eigen bedrag en mededeling. Het groepsbericht bevat geen bedragen — je deelt het met je eigen apps.',
+      innBerichtUitleg: innBerichtMensen.length + ' leiders met streepjes · ' + this.euro(innSelTotaal) + '. Eén bericht voor de hele groep — zonder bedragen, ieder vindt zijn eigen deel in de app. Wie achterloopt, por je apart in de lijst hieronder.',
       innOpener: s.innOpener,
       zetInnOpener: e => this.setState({ innOpener: e.target.value }),
-      innPreviewKop: ('MAIL AAN ' + innVoorbeeld.nick + ' · ' + (s.mails[innVoorbeeld.id] || '')).toUpperCase(),
-      innPreview: innPersoonlijk(innVoorbeeld),
-      innMailLabel: 'Mail alle ' + innBerichtMensen.length,
-      innMailAllen: () => this.zegToast('Afrekening van periode ' + innP.nr + ' gemaild naar ' + innBerichtMensen.length + ' leiders · niet bijgehouden'),
-      innDeelGroep: () => this.setState({ deel: { groep: true, nr: innP.nr, tekst: innGroepsBericht, mode: 'afrekening' } }),
+      innPreviewKop: 'BERICHT VOOR DE GROEP',
+      innPreview: innGroepsBericht,
+      innDeelGroep: () => this.deelNatief('Periode ' + innP.nr + ' afgesloten', innGroepsBericht, 'Groepsbericht'),
       innPSub: innMensen.length + ' leiders · ' + this.euro(innSelOpenEuro) + ' open · ' + this.euro(innSelTotaal) + ' totaal',
       innPSubFg: innSelOpen.length > 0 ? '#E4483A' : 'rgba(216,246,81,.75)',
       innVorigeRand: innIdx < innAlle.length - 1 ? 'rgba(244,241,230,.28)' : 'rgba(244,241,230,.1)',
@@ -1654,7 +1721,7 @@ class Component extends DCLogic {
             porKnop: 'Por · delen',
             porFg: '#F0A32B',
             porRand: 'rgba(240,163,43,.55)',
-            por: () => this.setState({ deel: { id: m.id, mode: 'por' } }),
+            por: () => this.deelNatief('Por periode ' + A.nr, berichtVoor(m, 'por'), 'Por voor ' + m.nick),
             knop: st === 'betaald' ? 'Terug openzetten' : 'Ontvangen · vink af',
             knopBg: st === 'betaald' ? 'transparent' : '#D8F651',
             knopFg: st === 'betaald' ? 'rgba(244,241,230,.7)' : '#121310',
@@ -1696,6 +1763,7 @@ class Component extends DCLogic {
       sluitMenu: () => this.setState({ menuOpen: false }),
       nav: [
         { key: 'lijst', label: 'De lijst', sub: s.mensen.length + ' leiders · ' + totStreep + ' streepjes' },
+        { key: 'audit', label: 'Mijn logboek', sub: s.log.filter(e => e.pid === this.mijnId).length + ' boekingen in periode ' + P.nr },
         { key: 'profiel', label: 'Mijn profiel', sub: 'je bijnaam op de lijst · ' + ik.nick },
         { key: 'meldingen', label: 'Meldingen', sub: wachtend > 0 ? wachtend + ' wachten op jou' : 'niets wacht op jou', badge: ongelezen > 0 ? String(ongelezen) : null },
         { key: 'betalen', label: 'Betalen', sub: mijnStatus === 'betaald' ? 'niets openstaand' : mijnStatus === 'gemeld' ? this.euro(p6Bedrag(ik)) + ' doorgegeven · wacht op Fien' : this.euro(p6Bedrag(ik)) + ' open · periode ' + A.nr, badge: mijnStatus === 'open' ? '1' : null },
@@ -1708,20 +1776,43 @@ class Component extends DCLogic {
         bg: s.scherm === t.key ? 'rgba(216,246,81,.08)' : '#161811',
         fg: s.scherm === t.key ? '#F4F1E6' : 'rgba(244,241,230,.72)',
         subFg: s.scherm === t.key ? 'rgba(244,241,230,.55)' : 'rgba(244,241,230,.38)',
-        ga: () => this.setState({ scherm: t.key, menuOpen: false, gelezen: t.key === 'meldingen' ? true : s.gelezen })
+        ga: () => this.setState({ scherm: t.key, menuOpen: false, auditId: t.key === 'audit' ? this.mijnId : s.auditId, auditAlles: false, gelezen: t.key === 'meldingen' ? true : s.gelezen })
       })),
 
       // ── Nieuwe leider
       nieuwOpen: s.nieuwOpen,
       openNieuw: () => this.setState({ nieuwOpen: true, nieuwFout: null }),
-      sluitNieuw: () => this.setState({ nieuwOpen: false, nieuwNick: '', nieuwNaam: '', nieuwMail: '', nieuwFout: null }),
-      nieuwNick: s.nieuwNick, nieuwNaam: s.nieuwNaam, nieuwMail: s.nieuwMail,
+      sluitNieuw: () => this.setState({ nieuwOpen: false, nieuwNick: '', nieuwNaam: '', nieuwFout: null }),
+      nieuwNick: s.nieuwNick, nieuwNaam: s.nieuwNaam,
       zetNieuwNick: e => this.setState({ nieuwNick: e.target.value, nieuwFout: null }),
       zetNieuwNaam: e => this.setState({ nieuwNaam: e.target.value }),
-      zetNieuwMail: e => this.setState({ nieuwMail: e.target.value, nieuwFout: null }),
       nieuwFout: s.nieuwFout,
       nieuwNickRand: s.nieuwFout ? '#E4483A' : 'rgba(244,241,230,.12)',
       bewaarNieuw: () => this.bewaarLeider(),
+
+      // ── Logboek (audit)
+      auditOpen: s.scherm === 'audit',
+      sluitAudit: () => this.setState({ scherm: 'lijst' }),
+      auditTitel: auditPid == null ? 'Heel de lijst' : auditP.nick,
+      auditPeriode: 'PERIODE ' + P.nr + ' · ' + this.kort(P.start) + '–' + this.kort(P.eind || this.vandaag),
+      auditIntro: auditPid == null
+        ? 'Elke streep en elke bak van periode ' + P.nr + ', per dag, met wie ze zette.'
+        : 'Alles wat er in periode ' + P.nr + ' op naam van ' + auditP.nick + ' kwam, per dag, met wie het zette.',
+      auditStats: [
+        { waarde: auditStreepTot, label: 'STREEPJES', kleur: '#F4F1E6' },
+        { waarde: auditBakTot, label: 'BAKKEN', kleur: '#F0A32B' },
+        { waarde: auditEvents.length, label: 'BOEKINGEN', kleur: '#D8F651' }
+      ],
+      auditMetaRegel: auditEvents.length
+        ? auditAnderen === 0
+          ? 'Alles zelf gestreept — niemand streepte voor iemand anders.'
+          : auditAnderen + ' van de ' + auditEvents.length + ' boekingen kwamen van iemand anders. Die staan in het paars.'
+        : '',
+      auditDagen: auditDagen,
+      auditLeeg: auditEvents.length === 0,
+      auditLeegTekst: auditPid == null
+        ? 'Er staat nog geen enkele streep in periode ' + P.nr + '.'
+        : auditP.nick + ' staat nog niet in het logboek van periode ' + P.nr + '.',
 
       // ── Meldingen
       meldingenOpen: s.scherm === 'meldingen',
@@ -1791,7 +1882,7 @@ class Component extends DCLogic {
             {
               soort: 'Nieuw in de groep', kleur: '#C7A6FF', bg: '#161811', tijd: 'do',
               tekst: 'Nore is aangesloten via jouw uitnodiging.',
-              meta: 'Ingelogd met Google · nore.pauwels@gmail.com',
+              meta: 'Ingelogd met Google via jouw link',
               tally: false, acties: false, status: null, knoppen: []
             },
             {
