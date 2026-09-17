@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { actievePeriode, bedrag, dagNa, euro, euroTotaal, geldigeMail, magRol, magRolWijzigen, mededeling, totals } from './period'
+import { actievePeriode, bedrag, dagLabel, dagNa, euro, euroTotaal, geldigeMail, magRol, magRolWijzigen, mededeling, totals } from './period'
 import type { Entry } from './period'
 
 test('groups entries per person and per kind', () => {
@@ -124,4 +124,19 @@ test('TASK-10 AC1: een periode afgesloten met een einddatum in de toekomst blijf
   expect(actievePeriode(periodes, '2026-09-09')).toBe(periodes[0])
   expect(actievePeriode(periodes, '2026-09-30')).toBe(periodes[0])
   expect(actievePeriode(periodes, '2026-10-01')).toBe(periodes[1])
+})
+
+test('TASK-13: dagLabel zet een moment in vandaag/gisteren/eerder, op de klok van het toestel', () => {
+  const nu = new Date('2026-09-17T09:00:00')
+
+  expect(dagLabel(new Date('2026-09-17T00:05:00'), nu)).toBe('vandaag')
+  expect(dagLabel(new Date('2026-09-17T23:59:00'), nu)).toBe('vandaag')
+  expect(dagLabel(new Date('2026-09-16T23:59:00'), nu)).toBe('gisteren')
+  expect(dagLabel(new Date('2026-09-15T23:59:00'), nu)).toBe('eerder')
+
+  // De reden dat dit lokaal rekent en niet in UTC: een melding van kwart voor
+  // middernacht is 's zomers 21:45 UTC — in UTC zou die als "vandaag" lezen
+  // terwijl het toestel al morgen aanwijst, en omgekeerd.
+  const laat = new Date('2026-09-17T23:45:00')
+  expect(dagLabel(laat, new Date('2026-09-18T01:00:00'))).toBe('gisteren')
 })

@@ -80,12 +80,23 @@ export function usePeriodes() {
  *  the old freeze protected against — a member deleting an old entry to
  *  shrink a settled bill — is now firestore.rules's binnenPeriode() check:
  *  an entry may only be written or deleted while its period is the active one. */
+/** TASK-13: one "period-closed" notification per non-guest member, in the same
+ *  batch as the close itself — no period without notifications, no notifications
+ *  without a closed period. `at` is `dagNa(eind)`, not `serverTimestamp()`: the
+ *  period isn't done being streeped on until that day (binnenPeriode() above),
+ *  and Betalen doesn't show the bill until then either (Betalen.tsx:193), so a
+ *  melding visible at the click would be lying about both. Everyone gets one,
+ *  not just who is currently open — someone at €0 today can still streep before
+ *  the last day. No amount in the text (AC8): the bill stays derived on Betalen.
+ *  ponytail: one write per member in a single batch, capped at Firestore's 500 —
+ *  no risk at this app's one-Chiro-group scale, revisit in chunks if that changes. */
 export const sluitPeriode = (
   period: Period,
   eind: string,
   nieuwePrijs: number,
   nieuweBakPrijs: number,
   byUid: string,
+  ontvangers: string[],
 ) => {
   const start = dagNa(eind)
   const batch = writeBatch(db)
@@ -104,6 +115,15 @@ export const sluitPeriode = (
     prijs: nieuwePrijs,
     bakPrijs: nieuweBakPrijs,
   })
+  for (const uid of ontvangers) {
+    batch.set(doc(collection(db, 'users', uid, 'notifications')), {
+      kind: 'period-closed',
+      text: `Periode ${period.nr} is afgesloten. Je kan nu overschrijven.`,
+      meta: 'Op de rekening van de groep · je bedrag staat klaar op Betalen',
+      at: naarTimestamp(start),
+      action: { label: 'Naar je betaling', screen: 'Betalen' },
+    })
+  }
   return batch.commit()
 }
 
@@ -310,15 +330,23 @@ export const addGuest = (periodId: string, nick: string, naam: string, mail: str
 
 /** users/{uid}, live: the extra fields (mail) that Person/usePeople doesn't carry (TASK-5),
  *  plus `rondje` (TASK-12): has this person had the Welkomstrondje, default false so every
- *  user document written before this task still gates the round on first read. */
+ *  user document written before this task still gates the round on first read. `readAt`
+ *  (TASK-13) is undefined for anyone who never opened Meldingen — undefined reads as
+ *  "everything is unread", same convention as `rondje: false`. */
 export function useProfile(uid: string) {
-  const [profile, setProfile] = useState<{ nick: string; naam: string; mail: string; rondje: boolean }>()
+  const [profile, setProfile] = useState<{ nick: string; naam: string; mail: string; rondje: boolean; readAt: Date | undefined }>()
 
   useEffect(
     () =>
       onSnapshot(doc(db, 'users', uid), (snap) => {
         const data = snap.data()
-        setProfile({ nick: data?.nick ?? '', naam: data?.name ?? '', mail: data?.mail ?? '', rondje: data?.rondje ?? false })
+        setProfile({
+          nick: data?.nick ?? '',
+          naam: data?.name ?? '',
+          mail: data?.mail ?? '',
+          rondje: data?.rondje ?? false,
+          readAt: (data?.readAt as Timestamp | undefined)?.toDate(),
+        })
       }),
     [uid],
   )
@@ -336,6 +364,66 @@ export const markRondje = (uid: string) => setDoc(doc(db, 'users', uid), { rondj
  *  already use `mail` for their afrekening address (addGuest). */
 export const saveProfile = (uid: string, nick: string, naam: string, mail: string) =>
   setDoc(doc(db, 'users', uid), { nick, name: naam, mail }, { merge: true })
+
+/** TASK-13: a plain in-memory shape, not a Firestore snapshot (AC3) — TASK-15's
+ *  derived "voor jou gezet" meldingen produce the same shape from the entry
+ *  ledger (no doc) and just concat onto whatever useMeldingen returns. */
+export type Melding = {
+  id: string
+  kind: string
+  text: string
+  meta: string
+  at: Date
+  action?: { label: string; screen: string }
+}
+
+/** users/{uid}/notifications, live. `at` can be in the future (sluitPeriode's
+ *  fanout plans a period-closed melding for dagNa(eind)), so filtering on
+ *  `at <= nu` happens here, once, rather than trusting every future writer to
+ *  add its own visibility field. ponytail: filtered/sorted in JS, not in the
+ *  query — a few tens of docs at this app's scale, and it skips a composite index. */
+export function useMeldingen(uid: string) {
+  const [meldingen, setMeldingen] = useState<Melding[]>([])
+
+  useEffect(
+    () =>
+      onSnapshot(collection(db, 'users', uid, 'notifications'), (snap) => {
+        const nu = new Date()
+        setMeldingen(
+          snap.docs
+            .map((d) => {
+              const data = d.data()
+              return {
+                id: d.id,
+                kind: data.kind as string,
+                text: data.text as string,
+                meta: data.meta as string,
+                at: (data.at as Timestamp).toDate(),
+                action: data.action as { label: string; screen: string } | undefined,
+              }
+            })
+            .filter((m) => m.at <= nu)
+            .sort((a, b) => b.at.getTime() - a.at.getTime()),
+        )
+      },
+      // Een geweigerde listen gooit anders een onafgehandelde fout in de
+      // console en niets meer — precies hoe een nog niet gedeployde
+      // rules-wijziging eruitziet (zie useGroup's comment hierboven). Meldingen
+      // zijn niet het soort data waar de app op mag blijven hangen: een lege
+      // feed is de juiste terugval, de rest van de lijst hoort te blijven werken.
+      () => setMeldingen([]),
+    ),
+    [uid],
+  )
+
+  return meldingen
+}
+
+/** Meldingen openen (of "alles gelezen" tikken) zet dit ene tijdstempel — geen
+ *  gelezen-bit per document, zie firestore.rules: een melding is read-only
+ *  voor de ontvanger, en een afgeleide melding (TASK-15) heeft toch geen doc
+ *  om zo'n bit op te zetten. */
+export const markGelezen = (uid: string) => setDoc(doc(db, 'users', uid), { readAt: serverTimestamp() }, { merge: true })
 
 export type Invite = { email: string; by: string; byNick: string; herinnerd: number; at?: { toDate: () => Date } }
 

@@ -82,7 +82,10 @@ export function Afsluiten({
       setStap((s) => (s + 1) as 2 | 3)
       return
     }
-    await sluitPeriode(period, eind, prijs, bakPrijs, user.uid)
+    // AC7/AC8: iedereen die geen gast is, niet alleen wie nu openstaat — wie bij de
+    // klik op nul staat, kan de laatste dagen nog bijstrepen.
+    const ontvangers = people.filter((p) => !p.isGuest).map((p) => p.id)
+    await sluitPeriode(period, eind, prijs, bakPrijs, user.uid, ontvangers)
     onToast(`Periode ${period.nr} afgesloten · iedereen ziet zijn bedrag onder Betalen`)
     onKlaar()
   }

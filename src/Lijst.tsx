@@ -4,11 +4,13 @@ import {
   addBak,
   addGuest,
   addStreep,
+  markGelezen,
   periodId as pidOf,
   removeOne,
   undo,
   useEntries,
   useGroup,
+  useMeldingen,
   usePeople,
   usePeriodes,
   useProfile,
@@ -22,6 +24,7 @@ import { Beheer } from './Beheer'
 import { Afsluiten } from './Afsluiten'
 import { Betalen } from './Betalen'
 import { Inningen } from './Inningen'
+import { Meldingen } from './Meldingen'
 import { Rondje } from './Rondje'
 import { useScherm } from './route'
 
@@ -97,6 +100,7 @@ export function Lijst({ user }: { user: User }) {
   const entries = useEntries(pid)
   const tot = totals(entries)
   const profile = useProfile(user.uid)
+  const meldingen = useMeldingen(user.uid)
 
   const [correctie, setCorrectie] = useState(false)
   const [geluid, setGeluid] = useState(() => localStorage.getItem('geluid') !== 'uit')
@@ -129,6 +133,12 @@ export function Lijst({ user }: { user: User }) {
     },
     [],
   )
+
+  // TASK-13 AC5: opening Meldingen sets readAt to now, same as design line 1729's
+  // openMeldingen. One readAt on users/{uid}, not a per-doc bit — see data.ts.
+  useEffect(() => {
+    if (scherm === 'Meldingen') markGelezen(user.uid)
+  }, [scherm, user.uid])
 
   const myRef = 'user:' + user.uid
   const myNick = people.find((p) => p.personRef === myRef)?.nick ?? user.displayName?.split(' ')[0] ?? '?'
@@ -250,14 +260,17 @@ export function Lijst({ user }: { user: User }) {
   const hintTekst = correctie ? 'TIK = –1 · VASTHOUDEN = – BAK' : 'TIK = +1 · VASTHOUDEN = BAK'
 
   const myRole = people.find((p) => p.personRef === myRef)?.role ?? 'lid'
+  // TASK-13 AC6: unread = at later than readAt, undefined readAt = everything
+  // unread (nobody has opened Meldingen yet), same convention as profile.rondje.
+  const ongelezen = meldingen.filter((m) => !profile?.readAt || m.at > profile.readAt).length
   // Label plus, where it applies, the role the destination belongs to (design
   // lines 556-562: slot = DRANKLEIDER, admin = BEHEERDER). `alleNav` is the full
   // set, gated by magRol below — a beheerder satisfies a drankleider-only
   // destination too (design line 1705's enkelAdmin), a lid satisfies neither.
-  const alleNav: { label: string; rol?: Rol }[] = [
+  const alleNav: { label: string; rol?: Rol; badge?: number }[] = [
     { label: 'De lijst' },
     { label: 'Mijn profiel' },
-    { label: 'Meldingen' },
+    { label: 'Meldingen', badge: ongelezen || undefined },
     { label: 'Betalen' },
     { label: 'Inningen', rol: 'drankleider' },
     { label: 'Periode afsluiten', rol: 'drankleider' },
@@ -318,6 +331,8 @@ export function Lijst({ user }: { user: User }) {
       </div>
       {open === 'Mijn profiel' ? (
         <Profiel user={user} people={people} period={period} onToast={toast} />
+      ) : open === 'Meldingen' ? (
+        <Meldingen nick={myNick} meldingen={meldingen} readAt={profile?.readAt} onGa={setScherm} onAllesGelezen={() => markGelezen(user.uid)} />
       ) : open === 'Beheer' ? (
         <Beheer user={user} people={people} group={group} onToast={toast} />
       ) : open === 'Periode afsluiten' ? (
@@ -576,7 +591,7 @@ export function Lijst({ user }: { user: User }) {
 
             <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '18px 0 34px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 1, background: 'rgba(244,241,230,.08)' }}>
-                {nav.map(({ label, rol }) => (
+                {nav.map(({ label, rol, badge }) => (
                   <div
                     key={label}
                     onClick={() => {
@@ -589,6 +604,25 @@ export function Lijst({ user }: { user: User }) {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ font: '400 19px/1 Anton,sans-serif', letterSpacing: '.02em', textTransform: 'uppercase', color: paper }}>{label}</div>
                     </div>
+                    {/* TASK-13 AC6: an unread count, no badge at zero (badge is left
+                        undefined by alleNav above whenever ongelezen is 0). */}
+                    {!!badge && (
+                      <div
+                        style={{
+                          flex: 'none',
+                          minWidth: 22,
+                          height: 22,
+                          padding: '0 6px',
+                          borderRadius: 99,
+                          background: red,
+                          color: '#fff',
+                          font: '700 11px/22px "Space Grotesk",sans-serif',
+                          textAlign: 'center',
+                        }}
+                      >
+                        {badge}
+                      </div>
+                    )}
                     {rol && (
                       <div
                         style={{

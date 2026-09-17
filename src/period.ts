@@ -82,6 +82,20 @@ export function actievePeriode<T extends { start: string; eind: string | null }>
   return periodes.find((p) => p.start <= vandaag && (p.eind == null || vandaag <= p.eind))
 }
 
+/** TASK-13: which day-bucket a moment falls in relative to "now" — pure so the
+ *  Meldingen screen's group headers (VANDAAG/GISTEREN/EERDER) and its per-item
+ *  relative time run off the same three states, testable without rendering
+ *  anything. Lokale tijd, niet UTC zoals dagNa hierboven: dagNa rekent met
+ *  kale datums die overal dezelfde dag moeten opleveren, maar "is dit vandaag"
+ *  is een vraag over de klok van de telefoon in je hand — in de zomer zit
+ *  België twee uur voor op UTC, en dan zou alles na 22:00 als "gisteren" lezen. */
+export function dagLabel(at: Date, nu: Date): 'vandaag' | 'gisteren' | 'eerder' {
+  if (at.toDateString() === nu.toDateString()) return 'vandaag'
+  const gisteren = new Date(nu)
+  gisteren.setDate(gisteren.getDate() - 1)
+  return at.toDateString() === gisteren.toDateString() ? 'gisteren' : 'eerder'
+}
+
 /** The payment reference shown under the nick input, design's mededeling() (line 888-891). */
 export const mededeling = (nick: string, period: { nr: number; start: string; eind: string | null }) =>
   'STREEPJES P' + period.nr + ' ' + kort(period.start) + '-' + (period.eind ? kort(period.eind) : '') + ' ' + nick.toUpperCase()

@@ -104,7 +104,8 @@ test('AC5/AC6: bevestigen sluit de periode af met de gekozen einddatum en prijze
 
   await act(async () => void fireEvent.click(screen.getByText('Afsluiten en nieuwe starten')))
 
-  expect(calls.sluit).toEqual([[period, '2026-09-30', 1.5, 30, 'u1']])
+  // TASK-13 AC7: de ontvangers zijn elk niet-gast-lid (Fien is gast, die logt niet in).
+  expect(calls.sluit).toEqual([[period, '2026-09-30', 1.5, 30, 'u1', ['u1', 'u2']]])
   expect(onToast).toHaveBeenCalledWith('Periode 3 afgesloten · iedereen ziet zijn bedrag onder Betalen')
   expect(onKlaar).toHaveBeenCalled()
 })

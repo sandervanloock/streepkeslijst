@@ -299,3 +299,50 @@ test('AC8: een niet-uitgenodigd adres krijgt geen users/{uid} en komt nergens bi
   await assertFails(getDocs(collection(vreemde, 'periods/p1/entries')))
   await assertFails(getDoc(doc(vreemde, 'meta', 'group')))
 })
+
+/** TASK-13: users/{uid}/notifications — de ontvanger zit in het pad, dus lezen
+ *  is een padvergelijking. Aanmaken doet enkel de drankleider (de fanout in
+ *  sluitPeriode); niemand herschrijft of wist een melding achteraf, want
+ *  gelezen-status is het readAt-tijdstempel op users/{uid} zelf. */
+test('TASK-13: je leest alleen je eigen meldingen, en alleen een drankleider maakt ze aan', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const db = ctx.firestore()
+    await setDoc(doc(db, 'users', 'u1'), { nick: 'Sander', role: 'drankleider' })
+    await setDoc(doc(db, 'users', 'u2', 'notifications', 'n1'), {
+      kind: 'period-closed', text: 'Periode 1 is afgesloten.', meta: 'staat klaar', at: EIND,
+    })
+  })
+
+  // Wollie leest zijn eigen feed, Sander komt er niet in — ook niet als drankleider.
+  await assertSucceeds(getDocs(collection(wollie(), 'users/u2/notifications')))
+  await assertFails(getDocs(collection(sander(), 'users/u2/notifications')))
+
+  // Sander is drankleider: hij meldt Wollie. Wollie kan dat niet bij Sander.
+  await assertSucceeds(
+    setDoc(doc(sander(), 'users', 'u2', 'notifications', 'n2'), {
+      kind: 'period-closed', text: 'Periode 2 is afgesloten.', meta: 'staat klaar', at: EIND,
+    }),
+  )
+  await assertFails(
+    setDoc(doc(wollie(), 'users', 'u1', 'notifications', 'n3'), {
+      kind: 'period-closed', text: 'verzonnen', meta: '', at: EIND,
+    }),
+  )
+})
+
+test('TASK-13: een melding is read-only — niemand herschrijft of wist er een, de ontvanger evenmin', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const db = ctx.firestore()
+    await setDoc(doc(db, 'users', 'u1'), { nick: 'Sander', role: 'drankleider' })
+    await setDoc(doc(db, 'users', 'u2', 'notifications', 'n1'), {
+      kind: 'period-closed', text: 'Periode 1 is afgesloten.', meta: 'staat klaar', at: EIND,
+    })
+  })
+
+  await assertFails(updateDoc(doc(wollie(), 'users', 'u2', 'notifications', 'n1'), { text: 'iets anders' }))
+  await assertFails(updateDoc(doc(sander(), 'users', 'u2', 'notifications', 'n1'), { text: 'iets anders' }))
+  await assertFails(deleteDoc(doc(wollie(), 'users', 'u2', 'notifications', 'n1')))
+
+  // Gelezen-status gaat dan ook niet per melding, maar via readAt op je eigen user-doc.
+  await assertSucceeds(setDoc(doc(wollie(), 'users', 'u2'), { readAt: EIND }, { merge: true }))
+})

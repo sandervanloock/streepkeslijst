@@ -40,6 +40,18 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // TASK-13: users/{uid}/notifications/{id} — the recipient sits in the
+    // path, not in a field, so reading your own feed is a path compare, no
+    // field comparison and no forgettable `where`. Only a drankleider/
+    // beheerder creates one (the fanout in sluitPeriode); nobody, including
+    // the recipient, ever rewrites or deletes one — read state is the single
+    // readAt timestamp on users/{uid} (that doc's own update rule) instead.
+    match /users/{uid}/notifications/{id} {
+      allow read: if request.auth.uid == uid;
+      allow create: if isDrankleider();
+      allow update, delete: if false;
+    }
+
     match /invites/{email} {
       // Only a beheerder hands invites out, reshares or revokes them (TASK-7
       // AC9). The one exception is the invitee's own atomic claim above: they

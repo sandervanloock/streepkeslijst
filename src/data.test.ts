@@ -5,6 +5,7 @@ import {
   addGuest,
   addStreep,
   herroepBetaling,
+  markGelezen,
   markRondje,
   meldBetaling,
   removeOne,
@@ -16,6 +17,7 @@ import {
   useBetaling,
   useEntries,
   useGroup,
+  useMeldingen,
   useOwnEntries,
   usePeriodes,
   useProfile,
@@ -32,14 +34,21 @@ const calls = {
   batchSet: [] as [string, Record<string, unknown>, Record<string, unknown> | undefined][],
 }
 let emit: ((snap: unknown) => void) | undefined
+let faal: ((e: Error) => void) | undefined
 let queryFilter: { field: string; value: unknown } | undefined
 let getDocsResult: { empty: boolean } = { empty: true }
 
 vi.mock('./firebase', () => ({ db: {} }))
 
+let autoId = 0
+
 vi.mock('firebase/firestore', () => ({
   collection: (_db: unknown, ...path: string[]) => path.join('/'),
-  doc: (_db: unknown, ...path: string[]) => path.join('/'),
+  // doc(db, ...path) addresses a known id; doc(collectionRef) — a single string
+  // arg, no path segments — is the auto-id overload sluitPeriode's fanout uses
+  // for each notification, so it gets a fake generated id instead.
+  doc: (dbOrCol: unknown, ...path: string[]) =>
+    typeof dbOrCol === 'string' && path.length === 0 ? `${dbOrCol}/auto${++autoId}` : path.join('/'),
   query: (path: string, whereClause: { field: string; value: unknown }) => {
     queryFilter = whereClause
     return path
@@ -59,10 +68,12 @@ vi.mock('firebase/firestore', () => ({
     calls.set.push([path, data])
     return Promise.resolve()
   },
-  onSnapshot: (_path: string, cb: NonNullable<typeof emit>) => {
+  onSnapshot: (_path: string, cb: NonNullable<typeof emit>, onError?: (e: Error) => void) => {
     emit = cb
+    faal = onError
     return () => {
       emit = undefined
+      faal = undefined
     }
   },
   serverTimestamp: () => 'TS',
@@ -84,8 +95,10 @@ beforeEach(() => {
   calls.set = []
   calls.batchSet = []
   emit = undefined
+  faal = undefined
   queryFilter = undefined
   getDocsResult = { empty: true }
+  autoId = 0
 })
 
 test('useEntries leest de periode-boekingen en volgt wat anderen erbij schrijven', () => {
@@ -141,10 +154,62 @@ test('useProfile leest users/{uid} en volgt wijzigingen, rondje default false', 
   expect(result.current).toBeUndefined()
 
   act(() => emit!({ data: () => ({ nick: 'Wollie', name: 'Wout D.', mail: 'w@x.be' }) }))
-  expect(result.current).toEqual({ nick: 'Wollie', naam: 'Wout D.', mail: 'w@x.be', rondje: false })
+  expect(result.current).toEqual({ nick: 'Wollie', naam: 'Wout D.', mail: 'w@x.be', rondje: false, readAt: undefined })
 
   act(() => emit!({ data: () => ({ nick: 'Wollie', name: 'Wout D.', mail: 'w@x.be', rondje: true }) }))
   expect(result.current?.rondje).toBe(true)
+})
+
+test('TASK-13: useProfile geeft readAt mee, undefined zolang niemand Meldingen opende', () => {
+  const { result } = renderHook(() => useProfile('u1'))
+
+  act(() => emit!({ data: () => ({ nick: 'Wollie', name: 'Wout D.' }) }))
+  expect(result.current?.readAt).toBeUndefined()
+
+  const nu = new Date('2026-09-16T10:00:00Z')
+  act(() => emit!({ data: () => ({ nick: 'Wollie', name: 'Wout D.', readAt: { toDate: () => nu } }) }))
+  expect(result.current?.readAt).toEqual(nu)
+})
+
+test('markGelezen merget readAt op users/{uid}, de rest van het profiel blijft staan', async () => {
+  await markGelezen('u1')
+  expect(calls.set).toEqual([['users/u1', { readAt: 'TS' }]])
+})
+
+test('TASK-13 AC10/AC3: useMeldingen verbergt at in de toekomst en sorteert aflopend, op een plat type', () => {
+  const { result } = renderHook(() => useMeldingen('u1'))
+  expect(result.current).toEqual([])
+
+  const nu = Date.now()
+  const verleden = new Date(nu - 60_000)
+  const toekomst = new Date(nu + 60_000)
+  const gisteren = new Date(nu - 2 * 86_400_000)
+
+  act(() =>
+    emit!({
+      docs: [
+        { id: 'n1', data: () => ({ kind: 'period-closed', text: 'A', meta: 'a', at: { toDate: () => gisteren } }) },
+        { id: 'n2', data: () => ({ kind: 'iets-nieuws', text: 'B', meta: 'b', at: { toDate: () => verleden }, action: { label: 'Ga', screen: 'Betalen' } }) },
+        { id: 'n3', data: () => ({ kind: 'period-closed', text: 'C', meta: 'c', at: { toDate: () => toekomst } }) },
+      ],
+    }),
+  )
+
+  expect(result.current.map((m) => m.id)).toEqual(['n2', 'n1']) // n3 ligt in de toekomst, blijft weg
+  expect(result.current[0]).toEqual({ id: 'n2', kind: 'iets-nieuws', text: 'B', meta: 'b', at: verleden, action: { label: 'Ga', screen: 'Betalen' } })
+})
+
+test('een geweigerde listen laat de feed leeg in plaats van de app om te trekken', () => {
+  // Precies wat een nog niet gedeployde rules-wijziging doet: users/{uid}/
+  // notifications is een subcollectie en erft niets van users/{uid}, dus zonder
+  // het match-blok is er geen regel en weigert Firestore de listen.
+  const { result } = renderHook(() => useMeldingen('u1'))
+
+  act(() => emit!({ docs: [{ id: 'n1', data: () => ({ kind: 'period-closed', text: 'A', meta: 'a', at: { toDate: () => new Date(Date.now() - 1000) } }) }] }))
+  expect(result.current).toHaveLength(1)
+
+  act(() => faal!(new Error('Missing or insufficient permissions.')))
+  expect(result.current).toEqual([])
 })
 
 test('markRondje zet alleen rondje, de rest van het profiel blijft staan', async () => {
@@ -247,7 +312,7 @@ test('TASK-10 AC3: sluitPeriode schrijft in één batch de einddatum op de sluit
     bakPrijs: 30,
   }
 
-  await sluitPeriode(period, '2026-08-31', 2, 36, 'u1')
+  await sluitPeriode(period, '2026-08-31', 2, 36, 'u1', [])
 
   expect(calls.set).toEqual([
     ['periods/p3', { eind: '2026-08-31', eindAt: 'TS:2026-08-31', closedBy: 'u1', closedAt: 'TS' }],
@@ -258,6 +323,30 @@ test('TASK-10 AC3: sluitPeriode schrijft in één batch de einddatum op de sluit
   ])
   expect(Object.keys(calls.set[0][1])).not.toContain('totals')
   expect(Object.keys(calls.set[1][1])).not.toContain('totals')
+})
+
+test('TASK-13 AC7/AC8: sluitPeriode meldt elke ontvanger in dezelfde batch, zichtbaar pas de dag na de laatste dag, zonder bedrag', async () => {
+  const period: Period = {
+    nr: 3,
+    start: '2026-08-01',
+    eind: null,
+    startAt: 'TS:2026-08-01' as unknown as Period['startAt'],
+    eindAt: null,
+    perBak: 24,
+    prijs: 1.5,
+    bakPrijs: 30,
+  }
+
+  await sluitPeriode(period, '2026-08-31', 2, 36, 'u1', ['u1', 'u2'])
+
+  const meldingen = calls.set.filter(([path]) => path.startsWith('users/'))
+  expect(meldingen.map(([path]) => path)).toEqual(['users/u1/notifications/auto1', 'users/u2/notifications/auto2'])
+  for (const [, data] of meldingen) {
+    expect(data.kind).toBe('period-closed')
+    expect(data.at).toBe('TS:2026-09-01') // dagNa('2026-08-31'), niet de datum van de klik
+    expect(data.action).toEqual({ label: 'Naar je betaling', screen: 'Betalen' })
+    expect(JSON.stringify(data)).not.toMatch(/€|\d+[.,]\d\d/) // geen bevroren bedrag in de tekst
+  }
 })
 
 test('TASK-9: useBetaling is open zonder doc, en volgt gemeld/betaald zoals ze binnenkomen', () => {

@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { User } from 'firebase/auth'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import type { Entry } from './period'
+import type { Melding } from './data'
 import { Lijst } from './Lijst'
 
 // Firestore stands in as an in-memory ledger: the writers append to `store`,
@@ -12,7 +13,8 @@ const store = {
   entries: [] as Row[],
   guests: [] as { nick: string; naam: string; pid: string }[],
   mijnRol: 'lid',
-  profiel: { nick: 'Sander', naam: 'Sander V.', mail: 'sander@x.be', rondje: true },
+  profiel: { nick: 'Sander', naam: 'Sander V.', mail: 'sander@x.be', rondje: true, readAt: undefined as Date | undefined },
+  meldingen: [] as Melding[],
 }
 const listeners = new Set<() => void>()
 let n = 0
@@ -86,6 +88,17 @@ vi.mock('./data', async () => {
     revokeInvite: vi.fn(() => Promise.resolve()),
     shareInvite: vi.fn(),
     sluitPeriode: vi.fn(() => Promise.resolve()),
+    // TASK-13: de feed komt als plat Melding[] binnen (AC3), en markGelezen zet
+    // het ene readAt-tijdstempel — hier de store, zodat de badge echt uitdooft.
+    useMeldingen: () => {
+      live()
+      return store.meldingen
+    },
+    markGelezen: vi.fn(() => {
+      store.profiel = { ...store.profiel, readAt: new Date() }
+      listeners.forEach((l) => l())
+      return Promise.resolve()
+    }),
     // Betalen (TASK-9): no closed period yet in these lijst-level tests, so it
     // renders its own "niets openstaand" fallback — Betalen.test.tsx covers the rest.
     useOwnEntries: () => [],
@@ -121,7 +134,8 @@ beforeEach(() => {
   store.entries = []
   store.guests = []
   store.mijnRol = 'lid'
-  store.profiel = { nick: 'Sander', naam: 'Sander V.', mail: 'sander@x.be', rondje: true }
+  store.profiel = { nick: 'Sander', naam: 'Sander V.', mail: 'sander@x.be', rondje: true, readAt: undefined }
+  store.meldingen = []
   n = 0
   localStorage.clear()
   location.hash = ''
@@ -396,4 +410,22 @@ test('TASK-12 AC8: #/rondje opent het rondje ook al is het al gezien, zo werkt d
   render(<Lijst user={me} />)
 
   expect(screen.getByText(/Welkom/)).toBeTruthy()
+})
+
+test('TASK-13 AC6: het menu telt de ongelezen meldingen, en dooft de badge zodra je ze opent', () => {
+  const nu = Date.now()
+  store.meldingen = [
+    { id: 'n1', kind: 'period-closed', text: 'Periode 1 is afgesloten.', meta: 'staat klaar', at: new Date(nu - 60_000), action: { label: 'Naar je betaling', screen: 'Betalen' } },
+    { id: 'n2', kind: 'something-new', text: 'Nog iets.', meta: 'ook ongelezen', at: new Date(nu - 30_000) },
+  ]
+  render(<Lijst user={me} />)
+  fireEvent.click(screen.getAllByText('Sander')[0])
+
+  expect(screen.getByText('2')).toBeTruthy()
+
+  // Het scherm openen zet readAt (design line 1729), dus de badge hoort weg te zijn.
+  act(() => void fireEvent.click(screen.getByText('Meldingen')))
+  fireEvent.click(screen.getAllByText('Sander')[0])
+
+  expect(screen.queryByText('2')).toBeNull()
 })
