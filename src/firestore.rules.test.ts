@@ -17,6 +17,7 @@ import {
   getDoc,
   getDocs,
   onSnapshot,
+  serverTimestamp,
   setDoc,
   Timestamp,
   updateDoc,
@@ -345,4 +346,50 @@ test('TASK-13: een melding is read-only — niemand herschrijft of wist er een, 
 
   // Gelezen-status gaat dan ook niet per melding, maar via readAt op je eigen user-doc.
   await assertSucceeds(setDoc(doc(wollie(), 'users', 'u2'), { readAt: EIND }, { merge: true }))
+})
+
+/** TASK-15 AC8: een gewoon lid (u1 en u2 zijn hier allebei 'lid', zie de
+ *  beforeEach-seed) mag precies één ding aanmaken voor iemand anders: de
+ *  eigen 'voor-jou'-melding, met de eigen nick, de vaste tekst, en een
+ *  document-id die bij de eigen uid en een datum hoort. Al de rest — een
+ *  andere kind, verzonnen tekst, andermans uid in de id — faalt. */
+const voorJouId = (uid: string) => 'voor-jou-2026-09-17-' + uid
+const voorJouVeld = (extra: Partial<{ kind: string; text: string; meta: string }> = {}) => ({
+  kind: 'voor-jou',
+  text: 'Sander zette streepjes op jouw naam',
+  meta: 'Aantal en tijdstip staan in je logboek.',
+  at: serverTimestamp(),
+  ...extra,
+})
+
+test('TASK-15 AC8: een lid mag de eigen voor-jou-melding aanmaken, met de eigen nick', async () => {
+  await assertSucceeds(setDoc(doc(sander(), 'users', 'u2', 'notifications', voorJouId('u1')), voorJouVeld()))
+})
+
+test('TASK-15 AC8: verzonnen tekst, een andere kind, of andermans uid in de id faalt', async () => {
+  await assertFails(
+    setDoc(doc(sander(), 'users', 'u2', 'notifications', voorJouId('u1')), voorJouVeld({ text: 'iets verzonnens' })),
+  )
+  await assertFails(
+    setDoc(doc(sander(), 'users', 'u2', 'notifications', voorJouId('u1')), voorJouVeld({ meta: 'iets anders' })),
+  )
+  await assertFails(
+    setDoc(doc(sander(), 'users', 'u2', 'notifications', voorJouId('u1')), voorJouVeld({ kind: 'period-closed' })),
+  )
+  // De id eindigt op de ontvanger (u2), niet op de schrijver zelf (u1).
+  await assertFails(setDoc(doc(sander(), 'users', 'u2', 'notifications', voorJouId('u2')), voorJouVeld()))
+})
+
+test('TASK-15 AC4/AC9: een tweede setDoc op dezelfde melding-id faalt (dedup via allow update: if false)', async () => {
+  await assertSucceeds(setDoc(doc(sander(), 'users', 'u2', 'notifications', voorJouId('u1')), voorJouVeld()))
+  await assertFails(setDoc(doc(sander(), 'users', 'u2', 'notifications', voorJouId('u1')), voorJouVeld()))
+})
+
+test('TASK-15 AC8: een voor-jou-melding is even read-only als elke andere — update en delete falen voor iedereen', async () => {
+  await assertSucceeds(setDoc(doc(sander(), 'users', 'u2', 'notifications', voorJouId('u1')), voorJouVeld()))
+
+  await assertFails(updateDoc(doc(sander(), 'users', 'u2', 'notifications', voorJouId('u1')), { text: 'anders' }))
+  await assertFails(updateDoc(doc(wollie(), 'users', 'u2', 'notifications', voorJouId('u1')), { text: 'anders' }))
+  await assertFails(deleteDoc(doc(sander(), 'users', 'u2', 'notifications', voorJouId('u1'))))
+  await assertFails(deleteDoc(doc(wollie(), 'users', 'u2', 'notifications', voorJouId('u1'))))
 })

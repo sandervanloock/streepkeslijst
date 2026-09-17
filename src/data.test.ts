@@ -23,6 +23,7 @@ import {
   useProfile,
 } from './data'
 import type { Period } from './data'
+import { meldingId } from './period'
 
 // The Firestore SDK is mocked down to paths and payloads: what we want to know
 // is that the writers land on periods/{pid}/entries with the right delta, and
@@ -37,6 +38,9 @@ let emit: ((snap: unknown) => void) | undefined
 let faal: ((e: Error) => void) | undefined
 let queryFilter: { field: string; value: unknown } | undefined
 let getDocsResult: { empty: boolean } = { empty: true }
+// TASK-15: simulates the rules denying the second setDoc of the evening
+// (`allow update: if false`) without needing the real emulator here.
+let setDocFaalt = false
 
 vi.mock('./firebase', () => ({ db: {} }))
 
@@ -65,6 +69,7 @@ vi.mock('firebase/firestore', () => ({
   getDoc: () => Promise.resolve({ exists: () => true }),
   getDocs: () => Promise.resolve(getDocsResult),
   setDoc: (path: string, data: Record<string, unknown>) => {
+    if (setDocFaalt) return Promise.reject(new Error('denied'))
     calls.set.push([path, data])
     return Promise.resolve()
   },
@@ -99,6 +104,7 @@ beforeEach(() => {
   queryFilter = undefined
   getDocsResult = { empty: true }
   autoId = 0
+  setDocFaalt = false
 })
 
 test('useEntries leest de periode-boekingen en volgt wat anderen erbij schrijven', () => {
@@ -137,6 +143,60 @@ test('boekingen landen op periods/{pid}/entries met wie, voor wie, wat en wannee
     ['periods/p1/entries', { personRef: 'guest:g0', kind: 'bak', delta: 3, by: 'u1', byNick: 'Sander', at: 'TS' }],
     ['periods/p1/entries', { personRef: 'user:u2', kind: 'streep', delta: -1, by: 'u1', byNick: 'Sander', at: 'TS' }],
   ])
+})
+
+test('TASK-15 AC1/AC3: strepen voor iemand anders schrijft één melding op users/{uid}/notifications/{meldingId}', async () => {
+  await addStreep('p1', 'user:u11', 'u10', 'Sander')
+  const id = meldingId('u10', new Date())
+
+  expect(calls.set).toEqual([
+    [
+      'users/u11/notifications/' + id,
+      {
+        kind: 'voor-jou',
+        text: 'Sander zette streepjes op jouw naam',
+        meta: 'Aantal en tijdstip staan in je logboek.',
+        at: 'TS',
+        action: { label: 'Naar mijn logboek', screen: 'Mijn logboek' },
+      },
+    ],
+  ])
+})
+
+test('TASK-15 AC5: strepen op je eigen naam schrijft geen melding', async () => {
+  await addStreep('p1', 'user:u12', 'u12', 'Sander')
+  expect(calls.set).toEqual([])
+})
+
+test('TASK-15: een gast heeft geen feed en krijgt geen melding', async () => {
+  await addBak('p1', 'guest:g1', 'u13', 'Sander', 2)
+  expect(calls.set).toEqual([])
+})
+
+test('TASK-15 AC9: de tweede tik dezelfde avond op dezelfde ontvanger stuurt geen tweede write', async () => {
+  await addStreep('p1', 'user:u15', 'u14', 'Sander')
+  await addStreep('p1', 'user:u15', 'u14', 'Sander')
+  await removeOne('p1', 'user:u15', 'streep', 'u14', 'Sander')
+
+  expect(calls.set.filter(([path]) => path.startsWith('users/u15/notifications'))).toHaveLength(1)
+})
+
+test('TASK-15 AC1/AC4: strepen voor een tweede ontvanger dezelfde avond schrijft wél een tweede melding', async () => {
+  await addStreep('p1', 'user:u17', 'u16', 'Sander')
+  await addStreep('p1', 'user:u18', 'u16', 'Sander')
+
+  const paths = calls.set.map(([path]) => path)
+  expect(paths).toContain('users/u17/notifications/' + meldingId('u16', new Date()))
+  expect(paths).toContain('users/u18/notifications/' + meldingId('u16', new Date()))
+})
+
+test('TASK-15: een geweigerde meldingswrite (rules-dedup) laat de entry-write intact', async () => {
+  setDocFaalt = true
+  await expect(addStreep('p1', 'user:u20', 'u19', 'Sander')).resolves.toBeDefined()
+  expect(calls.added).toEqual([
+    ['periods/p1/entries', { personRef: 'user:u20', kind: 'streep', delta: 1, by: 'u19', byNick: 'Sander', at: 'TS' }],
+  ])
+  expect(calls.set).toEqual([])
 })
 
 test('ongedaan maken verwijdert precies die ene boeking', async () => {
