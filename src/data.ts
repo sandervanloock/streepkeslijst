@@ -16,7 +16,7 @@ import {
   writeBatch,
 } from 'firebase/firestore'
 import { db } from './firebase'
-import { dagNa } from './period'
+import { dagNa, meldingId } from './period'
 import type { Entry } from './period'
 
 // TASK-10: a period doc carries its own range — start/eind next to startAt/
@@ -293,6 +293,20 @@ export function useOwnEntries(periodId: string | undefined, personRef: string) {
   return entries
 }
 
+// TASK-15: the fixed sentence firestore.rules checks byte-for-byte (a member
+// may only ever create this one, unchangeable text for themselves — see the
+// rules comment). No amount in either string on purpose: the melding is
+// stored, not derived, so a count would freeze a number that a next tap or
+// an undo can still change. The exact count and moment live in Mijn logboek,
+// which is why the action button points there instead.
+const VOOR_JOU_MELDING_META = 'Aantal en tijdstip staan in je logboek.'
+
+// In-memory only (AC9): caps a chatty session at one attempted write per
+// streper per ontvanger per avond instead of one per tap. A new tab/reload
+// starts a fresh Set, so at most one more write is attempted then — still
+// denied by the rules' dedup, never a second visible melding.
+const gemeldeVoorJou = new Set<string>()
+
 const writeEntry = (
   periodId: string,
   personRef: string,
@@ -300,8 +314,8 @@ const writeEntry = (
   delta: number,
   byUid: string,
   byNick: string,
-) =>
-  addDoc(collection(db, 'periods', periodId, 'entries'), {
+) => {
+  const entry = addDoc(collection(db, 'periods', periodId, 'entries'), {
     personRef,
     kind,
     delta,
@@ -309,6 +323,34 @@ const writeEntry = (
     byNick,
     at: serverTimestamp(),
   })
+
+  // AC5: nooit een melding over je eigen naam. Alleen 'user:'-refs hebben een
+  // feed — een gast heeft geen users/{uid} doc om er een in te schrijven.
+  if (personRef !== 'user:' + byUid && personRef.startsWith('user:')) {
+    const uid = personRef.slice('user:'.length)
+    const id = meldingId(byUid, new Date())
+    // Sleutel = ontvanger + id, niet id alleen: id bevat enkel de streper en de
+    // dag, dus zonder de ontvanger erbij zou strepen voor Fien de melding voor
+    // Wollie diezelfde avond blokkeren (twee verschillende ontvangers, AC1/AC4).
+    const sleutel = uid + '-' + id
+    if (!gemeldeVoorJou.has(sleutel)) {
+      gemeldeVoorJou.add(sleutel)
+      setDoc(doc(db, 'users', uid, 'notifications', id), {
+        kind: 'voor-jou',
+        text: `${byNick} zette streepjes op jouw naam`,
+        meta: VOOR_JOU_MELDING_META,
+        at: serverTimestamp(),
+        action: { label: 'Naar mijn logboek', screen: 'Mijn logboek' },
+      }).catch(() => {
+        // De tweede tik van dezelfde persoon op dezelfde avond botst op
+        // hetzelfde document-id; firestore.rules' `allow update: if false`
+        // weigert die, en dat IS de dedup (AC4) — geen aggregatie-code.
+      })
+    }
+  }
+
+  return entry
+}
 
 export const addStreep = (periodId: string, personRef: string, byUid: string, byNick: string, n = 1) =>
   writeEntry(periodId, personRef, 'streep', n, byUid, byNick)
@@ -373,9 +415,10 @@ export const markRondje = (uid: string) => setDoc(doc(db, 'users', uid), { rondj
 export const saveProfile = (uid: string, nick: string, naam: string, mail: string) =>
   setDoc(doc(db, 'users', uid), { nick, name: naam, mail }, { merge: true })
 
-/** TASK-13: a plain in-memory shape, not a Firestore snapshot (AC3) — TASK-15's
- *  derived "voor jou gezet" meldingen produce the same shape from the entry
- *  ledger (no doc) and just concat onto whatever useMeldingen returns. */
+/** TASK-13: a plain in-memory shape, read off a Firestore doc by useMeldingen
+ *  below. TASK-15's "voor jou gestreept" meldingen are documents too (kind
+ *  'voor-jou', written by writeEntry above) — not derived from the entry
+ *  ledger — so they fall out of the same onSnapshot, no separate merge. */
 export type Melding = {
   id: string
   kind: string

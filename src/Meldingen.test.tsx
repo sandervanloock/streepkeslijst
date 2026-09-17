@@ -65,6 +65,28 @@ test('AC10: een verzonnen kind met actie rendert en navigeert zonder codewijzigi
   expect(onGa).toHaveBeenCalledWith('Inningen')
 })
 
+// TASK-15 AC7: geen nieuw scherm, geen per-kind if-else — enkel twee
+// lookup-regels voor kind 'voor-jou', dus dit hoeft alleen het label en de
+// actieknop na te kijken, de rest bewijst AC10 hierboven al generiek.
+test("TASK-15 AC7: kind 'voor-jou' rendert met zijn eigen label en de actieknop naar het logboek", () => {
+  const { onGa } = toon([
+    {
+      id: 'n10',
+      kind: 'voor-jou',
+      text: 'Fien zette streepjes op jouw naam',
+      meta: 'Aantal en tijdstip staan in je logboek.',
+      at: geleden(5_000),
+      action: { label: 'Naar mijn logboek', screen: 'Mijn logboek' },
+    },
+  ])
+
+  expect(screen.getByText('Voor jou gestreept')).toBeTruthy()
+  expect(screen.getByText('Fien zette streepjes op jouw naam')).toBeTruthy()
+
+  fireEvent.click(screen.getByText('Naar mijn logboek'))
+  expect(onGa).toHaveBeenCalledWith('Mijn logboek')
+})
+
 test('een melding zonder actie toont geen knop', () => {
   toon([{ id: 'n2', kind: 'period-closed', text: 'Enkel ter info.', meta: 'niets te doen', at: geleden(10_000) }])
 

@@ -115,6 +115,15 @@ export const fuifDag = (at: Date): string => {
   return `${jaar}-${maand}-${dag}`
 }
 
+/** TASK-15: predictable notification doc id for "voor jou gestreept" — same
+ *  fuif-day boundary as the Logboek (fuifDag above), plus the streper's own
+ *  uid, so a second tap the same evening by the same person lands on the
+ *  same doc id instead of a fresh one. data.ts's writeEntry setDoc()s this
+ *  id; the second write hits an existing doc and firestore.rules' `allow
+ *  update: if false` denies it — that denial IS the dedup (AC4/AC9), no
+ *  aggregation code needed. */
+export const meldingId = (byUid: string, at: Date): string => 'voor-jou-' + fuifDag(at) + '-' + byUid
+
 export type LogboekRegel = {
   uur: number
   by: string

@@ -19,6 +19,7 @@ const lime = '#D8F651'
  *  test) still renders instead of throwing. */
 const kleurVanKind: Record<string, string> = {
   'period-closed': '#E4483A',
+  'voor-jou': lime,
 }
 
 /** Human soort-label per kind, fallback derived from the kind string itself
@@ -26,6 +27,7 @@ const kleurVanKind: Record<string, string> = {
  *  sensible rather than its raw machine id. */
 const labelVanKind: Record<string, string> = {
   'period-closed': 'Periode afgesloten',
+  'voor-jou': 'Voor jou gestreept',
 }
 
 const labelVoorKind = (kind: string) =>
