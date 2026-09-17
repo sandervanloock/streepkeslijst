@@ -430,13 +430,15 @@ test('TASK-13 AC6: het menu telt de ongelezen meldingen, en dooft de badge zodra
     { id: 'n2', kind: 'something-new', text: 'Nog iets.', meta: 'ook ongelezen', at: new Date(nu - 30_000) },
   ]
   render(<Lijst user={me} />)
-  fireEvent.click(screen.getAllByText('Sander')[0])
 
-  expect(screen.getByText('2')).toBeTruthy()
+  // De bel in de kop telt, zonder menu: Meldingen staat niet meer in het menu.
+  const bel = screen.getByLabelText('Meldingen, 2 ongelezen')
+  fireEvent.click(screen.getAllByText('Sander')[0])
+  expect(screen.queryByText('Meldingen')).toBeNull() // niet meer in het menu
 
   // Het scherm openen zet readAt (design line 1729), dus de badge hoort weg te zijn.
-  act(() => void fireEvent.click(screen.getByText('Meldingen')))
-  fireEvent.click(screen.getAllByText('Sander')[0])
+  act(() => void fireEvent.click(bel))
 
   expect(screen.queryByText('2')).toBeNull()
+  expect(screen.getByLabelText('Meldingen')).toBeTruthy()
 })

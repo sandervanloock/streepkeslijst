@@ -310,7 +310,7 @@ export function Rondje({ user, onKlaar }: { user: User; onKlaar: (toast?: string
             <div style={{ flex: 1, minHeight: 12 }} />
 
             <div style={{ padding: '0 2px 6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-              <div style={{ font: '400 9.5px ui-monospace,monospace', letterSpacing: '.16em', color: 'rgba(244,241,230,.38)', flex: 1, minWidth: 0 }}>
+              <div style={{ font: '400 9.5px ui-monospace,monospace', letterSpacing: '.16em', color: 'rgba(244,241,230,.6)', flex: 1, minWidth: 0 }}>
                 {gom ? 'TIK = –1 · VASTHOUDEN = – BAK' : 'TIK = +1 · VASTHOUDEN = BAK'}
               </div>
               <div
@@ -393,21 +393,22 @@ export function Rondje({ user, onKlaar }: { user: User; onKlaar: (toast?: string
 
             <div style={{ marginTop: 11, display: 'flex', flexDirection: 'column', gap: 7 }}>
               {[
-                { hoe: 'TIK', wat: gom ? 'één streepje weg' : 'één streepje erbij', bg: lime, aan: false },
-                { hoe: 'VASTHOUDEN', wat: gom ? 'een hele bak weg' : 'opent het bakvenster: kies hoeveel bakken', bg: amber, aan: false },
+                { hoe: 'TIK', wat: gom ? 'één streepje weg' : 'één streepje erbij', bg: lime, tekst: '#121310', aan: false },
+                { hoe: 'VASTHOUDEN', wat: gom ? 'een hele bak weg' : 'opent het bakvenster: kies hoeveel bakken', bg: amber, tekst: '#121310', aan: false },
                 {
                   hoe: 'CORRIGEREN',
                   wat: gom ? 'staat aan: alles wat je tikt gaat er nu af — tik "klaar" als je weer bijtelt' : 'rechtsboven de lijst: zet de gomstand aan om iets weg te halen',
-                  bg: gom ? red : 'rgba(244,241,230,.1)',
+                  bg: gom ? red : 'rgba(244,241,230,.14)',
+                  tekst: gom ? '#fff' : paper,
                   aan: gom,
                 },
-                { hoe: 'GELUID', wat: geluid ? 'staat aan: je hoort elke streep, zo weet je dat hij geteld is' : 'staat uit: geen tik, enkel een korte tril', bg: 'rgba(244,241,230,.1)', aan: false },
+                { hoe: 'GELUID', wat: geluid ? 'staat aan: je hoort elke streep, zo weet je dat hij geteld is' : 'staat uit: geen tik, enkel een korte tril', bg: 'rgba(244,241,230,.14)', tekst: paper, aan: false },
               ].map((g) => (
                 <div key={g.hoe} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 7px', margin: '0 -7px', borderRadius: 8, background: g.aan ? 'rgba(228,72,58,.14)' : 'transparent' }}>
-                  <div style={{ font: '400 10px/1 ui-monospace,monospace', letterSpacing: '.1em', color: g.hoe === 'CORRIGEREN' && g.aan ? '#fff' : '#121310', background: g.bg, borderRadius: 4, padding: '5px 7px', flex: 'none', minWidth: 58, textAlign: 'center' }}>
+                  <div style={{ font: '400 10px/1 ui-monospace,monospace', letterSpacing: '.1em', color: g.tekst, background: g.bg, borderRadius: 4, padding: '5px 7px', flex: 'none', minWidth: 58, textAlign: 'center' }}>
                     {g.hoe}
                   </div>
-                  <div style={{ flex: 1, font: '400 12px/1.45 "Space Grotesk",sans-serif', color: g.aan ? paper : 'rgba(244,241,230,.58)' }}>{g.wat}</div>
+                  <div style={{ flex: 1, font: '400 12px/1.45 "Space Grotesk",sans-serif', color: g.aan ? paper : 'rgba(244,241,230,.78)' }}>{g.wat}</div>
                   {g.aan && <div style={{ flex: 'none', font: '400 9px/1 ui-monospace,monospace', letterSpacing: '.1em', color: red }}>AAN</div>}
                 </div>
               ))}

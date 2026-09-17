@@ -89,6 +89,56 @@ function MenuChip({ nick, onOpen }: { nick: string; onOpen: () => void }) {
   )
 }
 
+/** The bell sits next to the menu chip on every screen, so the unread count is
+ *  visible without opening the menu first (the menu badge is only half the
+ *  story once notifications matter). Tapping it goes straight to Meldingen. */
+function Bel({ ongelezen, onOpen }: { ongelezen: number; onOpen: () => void }) {
+  return (
+    <div
+      onClick={onOpen}
+      aria-label={ongelezen ? `Meldingen, ${ongelezen} ongelezen` : 'Meldingen'}
+      style={{
+        position: 'relative',
+        width: KOPHOOGTE,
+        height: KOPHOOGTE,
+        borderRadius: 99,
+        background: 'rgba(244,241,230,.07)',
+        border: '1px solid rgba(244,241,230,.12)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        flex: 'none',
+      }}
+    >
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={ongelezen ? lime : 'rgba(244,241,230,.75)'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 8a6 6 0 1 0-12 0c0 6-2 8-2 8h16s-2-2-2-8" />
+        <path d="M10.5 20.5a2 2 0 0 0 3 0" />
+      </svg>
+      {!!ongelezen && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 2,
+            right: 1,
+            minWidth: 17,
+            height: 17,
+            padding: '0 4px',
+            borderRadius: 99,
+            background: red,
+            color: '#fff',
+            font: '700 10px/17px "Space Grotesk",sans-serif',
+            textAlign: 'center',
+            boxSizing: 'border-box',
+          }}
+        >
+          {ongelezen > 9 ? '9+' : ongelezen}
+        </div>
+      )}
+    </div>
+  )
+}
+
 type Snack = { id?: string; tekst: string; kleur: string }
 
 export function Lijst({ user }: { user: User }) {
@@ -268,17 +318,19 @@ export function Lijst({ user }: { user: User }) {
   // lines 556-562: slot = DRANKLEIDER, admin = BEHEERDER). `alleNav` is the full
   // set, gated by magRol below — a beheerder satisfies a drankleider-only
   // destination too (design line 1705's enkelAdmin), a lid satisfies neither.
-  const alleNav: { label: string; rol?: Rol; badge?: number }[] = [
+  const alleNav: { label: string; rol?: Rol; uitMenu?: boolean }[] = [
     { label: 'De lijst' },
-    { label: 'Mijn profiel' },
     { label: 'Mijn logboek' },
-    { label: 'Meldingen', badge: ongelezen || undefined },
+    // Meldingen blijft een geldige bestemming (bel in de kop, action-knoppen),
+    // maar staat niet meer in het menu — de bel is de weg ernaartoe.
+    { label: 'Meldingen', uitMenu: true },
     { label: 'Betalen' },
     { label: 'Inningen', rol: 'drankleider' },
     { label: 'Periode afsluiten', rol: 'drankleider' },
     { label: 'Beheer', rol: 'beheerder' },
+    { label: 'Mijn profiel' },
   ]
-  const nav = alleNav.filter((t) => !t.rol || magRol(myRole, t.rol))
+  const nav = alleNav.filter((t) => !t.uitMenu && (!t.rol || magRol(myRole, t.rol)))
 
   // With the screen in the URL, any destination is typeable by anyone — a lid
   // (or drankleider) who types a route above their role goes to the lijst,
@@ -329,6 +381,7 @@ export function Lijst({ user }: { user: User }) {
             {open}
           </h1>
         </div>
+        <Bel ongelezen={ongelezen} onOpen={() => setScherm('Meldingen')} />
         <MenuChip nick={myNick} onOpen={() => setMenuOpen(true)} />
       </div>
       {open === 'Mijn profiel' ? (
@@ -379,6 +432,7 @@ export function Lijst({ user }: { user: User }) {
             >
               Streepkeslijst
             </h1>
+            <Bel ongelezen={ongelezen} onOpen={() => setScherm('Meldingen')} />
             <MenuChip nick={myNick} onOpen={() => setMenuOpen(true)} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
@@ -595,7 +649,7 @@ export function Lijst({ user }: { user: User }) {
 
             <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '18px 0 34px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 1, background: 'rgba(244,241,230,.08)' }}>
-                {nav.map(({ label, rol, badge }) => (
+                {nav.map(({ label, rol }) => (
                   <div
                     key={label}
                     onClick={() => {
@@ -608,25 +662,6 @@ export function Lijst({ user }: { user: User }) {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ font: '400 19px/1 Anton,sans-serif', letterSpacing: '.02em', textTransform: 'uppercase', color: paper }}>{label}</div>
                     </div>
-                    {/* TASK-13 AC6: an unread count, no badge at zero (badge is left
-                        undefined by alleNav above whenever ongelezen is 0). */}
-                    {!!badge && (
-                      <div
-                        style={{
-                          flex: 'none',
-                          minWidth: 22,
-                          height: 22,
-                          padding: '0 6px',
-                          borderRadius: 99,
-                          background: red,
-                          color: '#fff',
-                          font: '700 11px/22px "Space Grotesk",sans-serif',
-                          textAlign: 'center',
-                        }}
-                      >
-                        {badge}
-                      </div>
-                    )}
                     {rol && (
                       <div
                         style={{
