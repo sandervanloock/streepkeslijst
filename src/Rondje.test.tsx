@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import type { User } from 'firebase/auth'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { Rondje } from './Rondje'
@@ -103,7 +103,7 @@ test('AC4: de demorij reageert op tik, vasthouden en de gomstand net als de echt
 
   await houdVast()
   expect(screen.getByText('EEN HELE BAK')).toBeTruthy()
-  fireEvent.click(screen.getByText('+'))
+  fireEvent.click(within(screen.getByText('EEN HELE BAK').parentElement!).getByText('+'))
   await act(async () => void fireEvent.click(screen.getByText('Zet erbij')))
   expect(document.querySelector('[data-demo-bak]')!.textContent).toBe('+ 2 BAKKEN')
 
