@@ -8,6 +8,11 @@ import { useRef, type ReactNode } from 'react'
 // share the exact same numbers and cannot drift apart.
 export const HOLD_MS = 620
 
+/** TASK-17: verschuift de vinger verder dan dit tijdens het drukken, dan was het
+ *  een scroll en geen tik. Zelfde drempel op de lijst en in het Welkomstrondje. */
+export const SLEEP_PX = 10
+export type Punt = { clientX: number; clientY: number }
+
 /** Design lines 958-974: a WebAudio noise burst + a vibrate, gated by the sound toggle. */
 export function useKlik(geluid: boolean) {
   const acRef = useRef<AudioContext | undefined>(undefined)

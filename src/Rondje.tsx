@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { User } from 'firebase/auth'
 import { markRondje, periodId as pidOf, saveProfile, useGroup, usePeople, usePeriodes } from './data'
 import { actievePeriode, euro, mededeling } from './period'
-import { HOLD_MS, tally, useKlik } from './tally'
+import { HOLD_MS, SLEEP_PX, tally, useKlik, type Punt } from './tally'
 
 // Ported from design/Onboarding.dc.html, the five-step Welkomstrondje shown
 // between Login and Lijst on a leader's first sign-in. Dutch copy verbatim,
@@ -45,6 +45,7 @@ export function Rondje({ user, onKlaar }: { user: User; onKlaar: (toast?: string
 
   const klik = useKlik(geluid)
   const holdRef = useRef(false)
+  const startPunt = useRef<{ x: number; y: number } | undefined>(undefined)
   const holdTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
@@ -99,8 +100,9 @@ export function Rondje({ user, onKlaar }: { user: User; onKlaar: (toast?: string
   // vasthouden opent het bakvenster — in gomstand haalt vasthouden meteen een
   // bak weg. HOLD_MS en useKlik komen uit tally.tsx zodat de twee rijen niet
   // uit elkaar kunnen groeien.
-  const demoDown = () => {
+  const demoDown = (punt: Punt) => {
     if (bakOpen) return
+    startPunt.current = { x: punt.clientX, y: punt.clientY }
     holdRef.current = true
     setHoudBezig(true)
     holdTimer.current = setTimeout(() => {
@@ -132,6 +134,13 @@ export function Rondje({ user, onKlaar }: { user: User; onKlaar: (toast?: string
     clearTimeout(holdTimer.current)
     holdRef.current = false
     setHoudBezig(false)
+  }
+
+  // Wegglijden = scrollen, geen tik. Zelfde drempel als op de lijst.
+  const demoBeweeg = (punt: Punt) => {
+    const s = startPunt.current
+    if (!s) return
+    if (Math.abs(punt.clientX - s.x) > SLEEP_PX || Math.abs(punt.clientY - s.y) > SLEEP_PX) demoAf()
   }
 
   const bakBevestig = () => {
@@ -175,8 +184,10 @@ export function Rondje({ user, onKlaar }: { user: User; onKlaar: (toast?: string
     ? 'Je gaat meteen naar de lijst. Je staat er als ' + nick.trim() + ' — later te wijzigen bij Mijn profiel.'
     : 'Je gaat meteen naar de lijst. Je staat er voorlopig zonder naam; die zet je erbij via Mijn profiel.'
 
+  // height, geen minHeight: zie Lijst.tsx — anders scrollt het document en
+  // zakken de lades onder de onderrand van het scherm.
   return (
-    <div style={{ minHeight: '100vh', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: '100dvh', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       <div style={{ flex: 'none', padding: '58px 20px 0', display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 5, height: 18, flex: 'none' }}>
           {labels.map((_, i) => (
@@ -343,21 +354,12 @@ export function Rondje({ user, onKlaar }: { user: User; onKlaar: (toast?: string
             </div>
 
             <div
-              data-demo-row
-              onPointerDown={demoDown}
-              onPointerUp={demoUp}
-              onPointerLeave={demoAf}
-              onPointerCancel={demoAf}
-              onContextMenu={(e) => e.preventDefault()}
               style={{
                 position: 'relative',
                 border: `1px solid ${gom ? red : demo > 0 ? 'rgba(216,246,81,.4)' : 'rgba(244,241,230,.14)'}`,
                 borderRadius: 12,
                 background: '#1B1D17',
                 padding: 14,
-                cursor: 'pointer',
-                userSelect: 'none',
-                touchAction: 'none',
                 overflow: 'hidden',
               }}
             >
@@ -369,13 +371,61 @@ export function Rondje({ user, onKlaar }: { user: User; onKlaar: (toast?: string
                   <div style={{ font: '400 18px/1 Anton,sans-serif', color: paper, textTransform: 'uppercase' }}>{toonNick}</div>
                   <div style={{ marginTop: 4, font: '400 10.5px "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.4)' }}>jij · deze periode</div>
                 </div>
-                <div style={{ textAlign: 'right', flex: 'none' }}>
-                  <div data-demo-aantal style={{ font: '400 26px/0.9 Anton,sans-serif', color: gom ? red : demo > 0 ? lime : 'rgba(244,241,230,.3)' }}>{demo}</div>
-                  <div style={{ font: '500 8.5px "Space Grotesk",sans-serif', letterSpacing: '.06em', color: 'rgba(244,241,230,.4)' }}>STREEPJES</div>
-                  {bak > 0 && (
-                    <div data-demo-bak style={{ marginTop: 5, font: '400 12px/1 Anton,sans-serif', letterSpacing: '.05em', color: amber }}>
-                      {'+ ' + bak + (bak > 1 ? ' BAKKEN' : ' BAK')}
-                    </div>
+                {/* TASK-17: net als op de echte lijst is alleen deze knop het
+                    tikgebied, zodat het rondje hetzelfde gebaar aanleert. */}
+                <div
+                  data-demo-row
+                  onPointerDown={demoDown}
+                  onPointerUp={demoUp}
+                  onPointerMove={demoBeweeg}
+                  onPointerLeave={demoAf}
+                  onPointerCancel={demoAf}
+                  onContextMenu={(e) => e.preventDefault()}
+                  style={{
+                    position: 'relative',
+                    overflow: 'hidden',
+                    textAlign: 'right',
+                    flex: 'none',
+                    minWidth: 76,
+                    padding: '9px 11px',
+                    borderRadius: 11,
+                    border: `1px solid ${gom ? red : 'rgba(216,246,81,.34)'}`,
+                    background: gom ? 'rgba(228,72,58,.12)' : 'rgba(216,246,81,.07)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
+                    gap: 8,
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    touchAction: 'pan-y',
+                  }}
+                >
+                  <div
+                    style={{
+                      flex: 'none',
+                      width: 24,
+                      height: 24,
+                      borderRadius: 99,
+                      border: `1px solid ${gom ? red : 'rgba(216,246,81,.55)'}`,
+                      color: gom ? red : lime,
+                      display: 'grid',
+                      placeItems: 'center',
+                      font: '400 15px/1 Anton,sans-serif',
+                    }}
+                  >
+                    {gom ? '–' : '+'}
+                  </div>
+                  <div>
+                    <div data-demo-aantal style={{ font: '400 26px/0.9 Anton,sans-serif', color: gom ? red : demo > 0 ? lime : 'rgba(244,241,230,.3)' }}>{demo}</div>
+                    <div style={{ font: '500 8.5px "Space Grotesk",sans-serif', letterSpacing: '.06em', color: 'rgba(244,241,230,.4)' }}>STREEPJES</div>
+                    {bak > 0 && (
+                      <div data-demo-bak style={{ marginTop: 5, font: '400 12px/1 Anton,sans-serif', letterSpacing: '.05em', color: amber }}>
+                        {'+ ' + bak + (bak > 1 ? ' BAKKEN' : ' BAK')}
+                      </div>
+                    )}
+                  </div>
+                  {houdBezig && (
+                    <div style={{ position: 'absolute', left: 0, bottom: 0, height: 3, background: amber, animation: 'holdfill .62s linear forwards' }} />
                   )}
                 </div>
               </div>
@@ -383,12 +433,9 @@ export function Rondje({ user, onKlaar }: { user: User; onKlaar: (toast?: string
                 {demo > 0 ? (
                   <span style={{ display: 'block' }}>{tally(demo, paper)}</span>
                 ) : (
-                  <div style={{ font: '400 11.5px "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.3)' }}>tik hier om te tellen ↑</div>
+                  <div style={{ font: '400 11.5px "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.3)' }}>tik op de knop hierboven om te tellen ↑</div>
                 )}
               </div>
-              {houdBezig && (
-                <div style={{ position: 'absolute', left: 0, bottom: 0, height: 3, background: amber, animation: 'holdfill .62s linear forwards' }} />
-              )}
             </div>
 
             <div style={{ marginTop: 11, display: 'flex', flexDirection: 'column', gap: 7 }}>
@@ -503,7 +550,7 @@ export function Rondje({ user, onKlaar }: { user: User; onKlaar: (toast?: string
       {bakOpen && (
         <>
           <div onClick={() => setBakOpen(false)} style={{ position: 'absolute', inset: 0, zIndex: 70, background: 'rgba(10,11,9,.62)' }} />
-          <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 80, background: '#1B1D17', borderTop: `2px solid ${amber}`, borderRadius: '18px 18px 0 0', padding: '18px 18px 40px', animation: 'sheetUp .24s cubic-bezier(.2,.9,.25,1) both' }}>
+          <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 80, background: '#1B1D17', borderTop: `2px solid ${amber}`, borderRadius: '18px 18px 0 0', padding: '18px 18px 40px', animation: 'sheetUp .24s cubic-bezier(.2,.9,.25,1) both', maxHeight: '88dvh', overflowY: 'auto' }}>
             <div style={{ font: '400 10px ui-monospace,monospace', letterSpacing: '.16em', color: amber }}>EEN HELE BAK</div>
             <div style={{ font: '400 34px/1 Anton,sans-serif', color: paper, textTransform: 'uppercase', margin: '6px 0 2px' }}>{toonNick}</div>
             <div style={{ font: '400 12px "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.55)' }}>

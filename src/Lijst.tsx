@@ -17,7 +17,7 @@ import {
 } from './data'
 import type { Rol } from './data'
 import { actievePeriode, euro, magRol, totals } from './period'
-import { HOLD_MS, tally, useKlik } from './tally'
+import { HOLD_MS, SLEEP_PX, tally, useKlik, type Punt } from './tally'
 import { signOut } from './auth'
 import { Profiel } from './Profiel'
 import { Beheer } from './Beheer'
@@ -160,6 +160,7 @@ export function Lijst({ user }: { user: User }) {
   const [holdingId, setHoldingId] = useState<string>()
   const holdRef = useRef<string | undefined>(undefined)
   const holdTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const startPunt = useRef<{ x: number; y: number } | undefined>(undefined)
 
   const [bakVoor, setBakVoor] = useState<string>()
   const [bakAantal, setBakAantal] = useState(1)
@@ -245,8 +246,9 @@ export function Lijst({ user }: { user: User }) {
     )
   }
 
-  const onHoldDown = (personRef: string) => {
+  const onHoldDown = (personRef: string, punt: Punt) => {
     holdRef.current = personRef
+    startPunt.current = { x: punt.clientX, y: punt.clientY }
     setHoldingId(personRef)
     clearTimeout(holdTimer.current)
     holdTimer.current = setTimeout(() => {
@@ -275,6 +277,15 @@ export function Lijst({ user }: { user: User }) {
       holdRef.current = undefined
       setHoldingId(undefined)
     }
+  }
+
+  // Een tik die wegglijdt is een scroll, geen streepje. De browser stuurt bij
+  // touch zelf een pointercancel zodra hij de pan overneemt; deze drempel dekt
+  // muis/pen en de trage aanzet waar dat nog niet gebeurd is.
+  const onHoldMove = (personRef: string, punt: Punt) => {
+    const s = startPunt.current
+    if (!s) return
+    if (Math.abs(punt.clientX - s.x) > SLEEP_PX || Math.abs(punt.clientY - s.y) > SLEEP_PX) onHoldCancel(personRef)
   }
 
   const bevestigBak = async () => {
@@ -405,7 +416,11 @@ export function Lijst({ user }: { user: User }) {
   return (
     <div
       style={{
-        minHeight: '100vh',
+        // Exact één schermhoogte, niet min-height: bij min-height groeit deze
+        // doos mee met de lijst, scrollt het document i.p.v. de binnenste doos,
+        // en landt elke `position:absolute; bottom:0` (lades, snackbar, menu)
+        // onder de onderrand van het scherm. dvh telt de browserbalk mee.
+        height: '100dvh',
         position: 'relative',
         overflow: 'hidden',
         display: 'flex',
@@ -515,10 +530,6 @@ export function Lijst({ user }: { user: User }) {
               <div
                 key={p.id}
                 data-row={p.personRef}
-                onPointerDown={() => onHoldDown(p.personRef)}
-                onPointerUp={() => onHoldUp(p.personRef)}
-                onPointerLeave={() => onHoldCancel(p.personRef)}
-                onPointerCancel={() => onHoldCancel(p.personRef)}
                 style={{
                   position: 'relative',
                   background: '#161811',
@@ -526,9 +537,8 @@ export function Lijst({ user }: { user: User }) {
                   display: 'flex',
                   alignItems: 'center',
                   gap: 10,
-                  cursor: 'pointer',
+                  // slepen over een naam scrollt, het selecteert geen tekst
                   userSelect: 'none',
-                  touchAction: 'none',
                 }}
               >
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -545,46 +555,77 @@ export function Lijst({ user }: { user: User }) {
                     <span style={{ display: 'block' }}>{tally(t.streep, paper)}</span>
                   </div>
                 </div>
-                <div style={{ textAlign: 'right', flex: 'none' }}>
-                  <div data-streep style={{ font: '400 27px/0.9 Anton,sans-serif', color: paper }}>{t.streep}</div>
-                  <div style={{ font: '500 9px "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.4)' }}>STREEPJES</div>
-                  {t.bak > 0 && (
-                    <div data-bak style={{ marginTop: 6, font: '400 12px/1 Anton,sans-serif', letterSpacing: '.05em', color: amber }}>
-                      {t.bak > 1 ? `+ ${t.bak} BAKKEN` : '+ 1 BAK'}
-                    </div>
-                  )}
-                </div>
-                {correctie && (
+                {/* TASK-17: alleen deze knop telt. De naamzone ernaast is dood
+                    hout, zodat een duim die één rij te hoog landt niets boekt en
+                    je overal op de lijst mag slepen om te scrollen. */}
+                <div
+                  data-tap
+                  onPointerDown={(e) => onHoldDown(p.personRef, e)}
+                  onPointerUp={() => onHoldUp(p.personRef)}
+                  onPointerMove={(e) => onHoldMove(p.personRef, e)}
+                  onPointerLeave={() => onHoldCancel(p.personRef)}
+                  onPointerCancel={() => onHoldCancel(p.personRef)}
+                  onContextMenu={(e) => e.preventDefault()}
+                  aria-label={correctie ? `Streepje weg bij ${p.nick}` : `Streepje erbij voor ${p.nick}`}
+                  style={{
+                    position: 'relative',
+                    overflow: 'hidden',
+                    flex: 'none',
+                    minWidth: 76,
+                    padding: '9px 11px',
+                    borderRadius: 11,
+                    border: `1px solid ${correctie ? red : 'rgba(216,246,81,.34)'}`,
+                    background: correctie ? 'rgba(228,72,58,.12)' : 'rgba(216,246,81,.07)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
+                    gap: 8,
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    // pan-y, niet none: de browser mag de verticale scroll
+                    // overnemen (en stuurt dan zelf pointercancel).
+                    touchAction: 'pan-y',
+                  }}
+                >
                   <div
                     style={{
                       flex: 'none',
-                      width: 26,
-                      height: 26,
+                      width: 24,
+                      height: 24,
                       borderRadius: 99,
-                      border: `1px solid ${red}`,
-                      color: red,
+                      border: `1px solid ${correctie ? red : 'rgba(216,246,81,.55)'}`,
+                      color: correctie ? red : lime,
                       display: 'grid',
                       placeItems: 'center',
                       font: '400 15px/1 Anton,sans-serif',
-                      opacity: t.streep > 0 ? 1 : 0.35,
+                      opacity: correctie && t.streep < 1 ? 0.35 : 1,
                     }}
                   >
-                    –
+                    {correctie ? '–' : '+'}
                   </div>
-                )}
-                {holdingId === p.personRef && (
-                  <div
-                    data-hold
-                    style={{
-                      position: 'absolute',
-                      left: 0,
-                      bottom: 0,
-                      height: 3,
-                      background: correctie ? red : amber,
-                      animation: 'holdfill .62s linear forwards',
-                    }}
-                  />
-                )}
+                  <div style={{ textAlign: 'right' }}>
+                    <div data-streep style={{ font: '400 27px/0.9 Anton,sans-serif', color: paper }}>{t.streep}</div>
+                    <div style={{ font: '500 9px "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.4)' }}>STREEPJES</div>
+                    {t.bak > 0 && (
+                      <div data-bak style={{ marginTop: 6, font: '400 12px/1 Anton,sans-serif', letterSpacing: '.05em', color: amber }}>
+                        {t.bak > 1 ? `+ ${t.bak} BAKKEN` : '+ 1 BAK'}
+                      </div>
+                    )}
+                  </div>
+                  {holdingId === p.personRef && (
+                    <div
+                      data-hold
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        bottom: 0,
+                        height: 3,
+                        background: correctie ? red : amber,
+                        animation: 'holdfill .62s linear forwards',
+                      }}
+                    />
+                  )}
+                </div>
               </div>
             )
           })}
@@ -724,6 +765,9 @@ export function Lijst({ user }: { user: User }) {
             borderRadius: '18px 18px 0 0',
             padding: '18px 18px 34px',
             animation: 'sheetUp .24s cubic-bezier(.2,.9,.3,1)',
+            // past de lade niet op een laag scherm, dan scrollt ze zelf
+            maxHeight: '88dvh',
+            overflowY: 'auto',
           }}
         >
           <div style={{ font: '400 10px ui-monospace,monospace', letterSpacing: '.16em', color: amber }}>GAST · PERIODE {period.nr}</div>
@@ -847,6 +891,9 @@ export function Lijst({ user }: { user: User }) {
             borderRadius: '18px 18px 0 0',
             padding: '18px 18px 40px',
             animation: 'sheetUp .24s cubic-bezier(.2,.9,.3,1)',
+            // past de lade niet op een laag scherm, dan scrollt ze zelf
+            maxHeight: '88dvh',
+            overflowY: 'auto',
           }}
         >
           <div style={{ font: '400 10px ui-monospace,monospace', letterSpacing: '.16em', color: amber }}>EEN HELE BAK</div>

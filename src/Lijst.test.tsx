@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import type { User } from 'firebase/auth'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import type { Entry } from './period'
@@ -113,19 +113,21 @@ const ANTON = 'user:u2'
 
 const q = (sel: string) => document.querySelector(sel) as HTMLElement | null
 const row = (ref: string) => q(`[data-row="${ref}"]`)!
+/** TASK-17: alleen de knop rechts in de rij boekt; de rij zelf is dood hout. */
+const knop = (ref: string) => row(ref).querySelector('[data-tap]')!
 const stat = (naam: string) => q(`[data-stat="${naam}"]`)!.textContent
 const streepjes = (ref: string) => row(ref).querySelector('[data-streep]')!.textContent
 const bakken = (ref: string) => row(ref).querySelector('[data-bak]')?.textContent
 
 /** One tap: pointerdown + pointerup inside the 620ms hold window. */
 const tik = async (ref: string) => {
-  fireEvent.pointerDown(row(ref))
-  await act(async () => void fireEvent.pointerUp(row(ref)))
+  fireEvent.pointerDown(knop(ref))
+  await act(async () => void fireEvent.pointerUp(knop(ref)))
 }
 
 /** A press held past HOLD_MS, which is what opens the BAK sheet. */
 const houdVast = async (ref: string) => {
-  fireEvent.pointerDown(row(ref))
+  fireEvent.pointerDown(knop(ref))
   await act(async () => vi.advanceTimersByTime(700))
 }
 
@@ -159,16 +161,42 @@ test('AC2: tikken zet een streep en werkt rij + kopstatistieken meteen bij', asy
   expect(streepjes('user:u1')).toBe('0')
 })
 
+test('TASK-17: de naamzone boekt niets en een scroll over de knop telt niet als tik', async () => {
+  render(<Lijst user={me} />)
+
+  // op de naam drukken doet niets — daar mag je veilig slepen om te scrollen
+  fireEvent.pointerDown(row(ANTON))
+  await act(async () => void fireEvent.pointerUp(row(ANTON)))
+  expect(streepjes(ANTON)).toBe('0')
+
+  // de lijst laat de verticale pan aan de browser, dus niets staat op none
+  expect(row(ANTON).style.touchAction).toBe('')
+  expect((knop(ANTON) as HTMLElement).style.touchAction).toBe('pan-y')
+
+  // een sleep die op de knop begint annuleert de tik én de vasthoud-timer
+  fireEvent.pointerDown(knop(ANTON), { clientX: 200, clientY: 300 })
+  fireEvent.pointerMove(knop(ANTON), { clientX: 202, clientY: 260 })
+  await act(async () => void fireEvent.pointerUp(knop(ANTON)))
+  expect(streepjes(ANTON)).toBe('0')
+  expect(q('[data-hold]')).toBeNull()
+  await act(async () => vi.advanceTimersByTime(700))
+  expect(screen.queryByText('EEN HELE BAK')).toBeNull()
+
+  // en een echte tik op de knop boekt gewoon
+  await tik(ANTON)
+  expect(streepjes(ANTON)).toBe('1')
+})
+
 test('AC3: vasthouden toont de voortgangsbalk, opent de BAK-lade en zet het gekozen aantal bakken', async () => {
   render(<Lijst user={me} />)
 
-  fireEvent.pointerDown(row(ANTON))
+  fireEvent.pointerDown(knop(ANTON))
   expect(q('[data-hold]')).not.toBeNull() // balk loopt tijdens het vasthouden
   await act(async () => vi.advanceTimersByTime(700))
 
   const lade = screen.getByText('EEN HELE BAK').parentElement!
   expect(lade.textContent).toContain('Anton') // lade staat op Antons naam
-  fireEvent.click(screen.getByText('+'))
+  fireEvent.click(within(lade).getByText('+'))
   expect(screen.getByText('24 streepjes per bak · 48 streepjes voor 2 bakken')).toBeTruthy()
 
   await act(async () => void fireEvent.click(screen.getByText('Zet op zijn naam')))
