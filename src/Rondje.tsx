@@ -184,8 +184,10 @@ export function Rondje({ user, onKlaar }: { user: User; onKlaar: (toast?: string
     ? 'Je gaat meteen naar de lijst. Je staat er als ' + nick.trim() + ' — later te wijzigen bij Mijn profiel.'
     : 'Je gaat meteen naar de lijst. Je staat er voorlopig zonder naam; die zet je erbij via Mijn profiel.'
 
+  // height, geen minHeight: zie Lijst.tsx — anders scrollt het document en
+  // zakken de lades onder de onderrand van het scherm.
   return (
-    <div style={{ minHeight: '100vh', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: '100dvh', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       <div style={{ flex: 'none', padding: '58px 20px 0', display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 5, height: 18, flex: 'none' }}>
           {labels.map((_, i) => (
@@ -548,7 +550,7 @@ export function Rondje({ user, onKlaar }: { user: User; onKlaar: (toast?: string
       {bakOpen && (
         <>
           <div onClick={() => setBakOpen(false)} style={{ position: 'absolute', inset: 0, zIndex: 70, background: 'rgba(10,11,9,.62)' }} />
-          <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 80, background: '#1B1D17', borderTop: `2px solid ${amber}`, borderRadius: '18px 18px 0 0', padding: '18px 18px 40px', animation: 'sheetUp .24s cubic-bezier(.2,.9,.25,1) both' }}>
+          <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 80, background: '#1B1D17', borderTop: `2px solid ${amber}`, borderRadius: '18px 18px 0 0', padding: '18px 18px 40px', animation: 'sheetUp .24s cubic-bezier(.2,.9,.25,1) both', maxHeight: '88dvh', overflowY: 'auto' }}>
             <div style={{ font: '400 10px ui-monospace,monospace', letterSpacing: '.16em', color: amber }}>EEN HELE BAK</div>
             <div style={{ font: '400 34px/1 Anton,sans-serif', color: paper, textTransform: 'uppercase', margin: '6px 0 2px' }}>{toonNick}</div>
             <div style={{ font: '400 12px "Space Grotesk",sans-serif', color: 'rgba(244,241,230,.55)' }}>

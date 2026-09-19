@@ -416,7 +416,11 @@ export function Lijst({ user }: { user: User }) {
   return (
     <div
       style={{
-        minHeight: '100vh',
+        // Exact één schermhoogte, niet min-height: bij min-height groeit deze
+        // doos mee met de lijst, scrollt het document i.p.v. de binnenste doos,
+        // en landt elke `position:absolute; bottom:0` (lades, snackbar, menu)
+        // onder de onderrand van het scherm. dvh telt de browserbalk mee.
+        height: '100dvh',
         position: 'relative',
         overflow: 'hidden',
         display: 'flex',
@@ -761,6 +765,9 @@ export function Lijst({ user }: { user: User }) {
             borderRadius: '18px 18px 0 0',
             padding: '18px 18px 34px',
             animation: 'sheetUp .24s cubic-bezier(.2,.9,.3,1)',
+            // past de lade niet op een laag scherm, dan scrollt ze zelf
+            maxHeight: '88dvh',
+            overflowY: 'auto',
           }}
         >
           <div style={{ font: '400 10px ui-monospace,monospace', letterSpacing: '.16em', color: amber }}>GAST · PERIODE {period.nr}</div>
@@ -884,6 +891,9 @@ export function Lijst({ user }: { user: User }) {
             borderRadius: '18px 18px 0 0',
             padding: '18px 18px 40px',
             animation: 'sheetUp .24s cubic-bezier(.2,.9,.3,1)',
+            // past de lade niet op een laag scherm, dan scrollt ze zelf
+            maxHeight: '88dvh',
+            overflowY: 'auto',
           }}
         >
           <div style={{ font: '400 10px ui-monospace,monospace', letterSpacing: '.16em', color: amber }}>EEN HELE BAK</div>
